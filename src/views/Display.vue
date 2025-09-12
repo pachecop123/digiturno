@@ -13,9 +13,10 @@
 
           <div class="tile-body-modern">
             <div class="turn-wrapper">
-<div class="turn-number-carniceria" :class="{ 'animate-number': popAnim }">
-  {{ showing }}
-</div>
+              <!-- 👇 Mostrar SIEMPRE "showing" -->
+              <div class="turn-number-carniceria" :class="{ 'animate-number': popAnim }">
+                {{ showing }}
+              </div>
               <div class="turn-label-carniceria">CARNICERÍA</div>
             </div>
           </div>
@@ -56,7 +57,7 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="carousel-item h-100">
                     <div class="ads-item">
                       <div class="offer-slide offer-special">
@@ -71,7 +72,7 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="carousel-item h-100">
                     <div class="ads-item">
                       <div class="offer-slide offer-info">
@@ -116,16 +117,22 @@ import { computed, ref, watch, onMounted } from 'vue'
 import store from '../store'
 
 /* Derivados seguros del store */
-const current = computed(() => store.state?.current ?? null)
-const queue   = computed(() => Array.isArray(store.state?.queue) ? store.state.queue : [])
-const prefix  = computed(() => store.state?.prefix || 'C')
+const current      = computed(() => store.state?.current ?? null)
+const lastAttended = computed(() => store.state?.lastAttended ?? null)
+const prefix       = computed(() => store.state?.prefix || 'C')
+const queue        = computed(() => Array.isArray(store.state?.queue) ? store.state.queue : [])
 
-/* Número que se muestra grande:
-   1) current
-   2) primero en cola
-   3) prefijo-000 (fallback) */
+/* Número a mostrar (prioridad):
+   1) en atención
+   2) último atendido
+   3) primero en cola
+   4) prefijo-000 (fallback)
+*/
 const showing = computed(() =>
-  current.value || queue.value[0] || `${prefix.value}-000`
+  current.value
+  || lastAttended.value
+  || queue.value[0]
+  || `${prefix.value}-000`
 )
 
 /* Animación cuando cambia lo que se muestra */
@@ -137,24 +144,20 @@ watch(showing, (n, o) => {
   }
 })
 
-/* (Opcional) Auto-avanzar si no hay current.
-   Pon en true si quieres que el Display llame automáticamente
-   el siguiente turno cuando esté en idle. */
+/* (Opcional) Auto-avanzar si no hay current */
 const AUTO_ADVANCE = false
 onMounted(() => {
   if (AUTO_ADVANCE && !current.value && queue.value.length) {
-    store.callNext?.() // usa el store para persistir y sincronizar
+    store.callNext?.()
   }
 })
 </script>
-
 
 <style scoped>
 /* =========================
    Paleta y sizing (scoped)
    ========================= */
 .display-diegoexito {
-  /* Colores */
   --diego-red: #C41E3A;
   --diego-red-dark: #A61729;
   --diego-red-light: #DC143C;
@@ -163,11 +166,10 @@ onMounted(() => {
   --diego-white: #FFFFFF;
   --diego-cream: #FEF7ED;
 
-  /* Alto adaptable (mejor con dvh en móviles) */
   --panel-h: clamp(400px, 72dvh, 920px);
 }
 
-/* ===== Base del diseño ===== */
+/* Fondo y base */
 .display-diegoexito {
   background: radial-gradient(ellipse at top, var(--diego-red) 0%, var(--diego-red-dark) 35%, #8B0000 100%);
   background-attachment: fixed;
@@ -175,34 +177,30 @@ onMounted(() => {
   color: var(--diego-white);
   position: relative;
 }
-
 .display-diegoexito::before {
   content: '';
   position: absolute; inset: 0;
   background: linear-gradient(135deg, rgba(196, 30, 58, 0.08) 0%, rgba(30, 64, 175, 0.08) 100%);
-  /* blur muy bajo para performance; cae bien si no hay soporte */
   -webkit-backdrop-filter: blur(0.5px);
   backdrop-filter: blur(0.5px);
 }
-
 .container-xl { position: relative; z-index: 1; }
 
-/* ===== Grid ===== */
+/* Grid */
 .display-grid-enhanced {
   display: grid;
   gap: 2rem;
   grid-template-columns: 1fr;
   grid-auto-rows: minmax(var(--panel-h), auto);
 }
-
 @media (min-width: 768px) {
   .display-grid-enhanced {
     grid-template-columns: 1.35fr 1fr;
-    align-items: stretch;         /* evita “cards encogidas” */
+    align-items: stretch;
   }
 }
 
-/* ===== Tarjetas ===== */
+/* Tarjeta base */
 .tile {
   background: rgba(255, 255, 255, 0.96);
   border: 2px solid rgba(196, 30, 58, 0.28);
@@ -215,26 +213,23 @@ onMounted(() => {
   transition: transform .28s ease, box-shadow .28s ease;
   position: relative;
 }
-
 .tile::before {
   content: '';
   position: absolute; left: 0; right: 0; top: 0; height: 3px;
   background: linear-gradient(90deg, var(--diego-red) 0%, var(--diego-blue) 50%, var(--diego-red) 100%);
 }
-
 .tile:hover {
   transform: translateY(-4px);
   box-shadow: 0 18px 50px rgba(196, 30, 58, 0.35);
 }
 
-/* ===== Headers ===== */
+/* Headers */
 .tile-head-carniceria {
   background: linear-gradient(135deg, var(--diego-red) 0%, var(--diego-red-dark) 100%);
   padding: 1.25rem 1.5rem;
   display: flex; align-items: center; gap: 1rem;
   position: relative;
 }
-
 .icon-wrapper-carniceria {
   background: var(--diego-white); color: var(--diego-red);
   padding: .7rem; border-radius: 12px;
@@ -242,19 +237,17 @@ onMounted(() => {
   display: grid; place-items: center;
 }
 .icon-wrapper-carniceria i { font-size: 1.25rem; }
-
 .section-title {
   font-weight: 800; font-size: 1.05rem; color: var(--diego-white);
   text-shadow: 0 2px 4px rgba(0, 0, 0, .28); letter-spacing: .5px;
 }
 
-/* ===== Turno ===== */
+/* Turno */
 .tile-body-modern {
   flex: 1; display: grid; place-items: center;
   padding: 1.75rem; background: var(--diego-white);
 }
 .turn-wrapper { text-align: center; position: relative; }
-
 .turn-number-carniceria {
   font-family: 'Arial Black', Arial, sans-serif;
   font-weight: 900;
@@ -276,7 +269,7 @@ onMounted(() => {
   text-shadow: 0 2px 4px rgba(30, 64, 175, .18);
 }
 
-/* ===== Footer ===== */
+/* Footer */
 .tile-foot-carniceria {
   background: linear-gradient(135deg, var(--diego-blue) 0%, var(--diego-blue-dark) 100%);
   padding: .9rem 1.5rem; text-align: center; color: var(--diego-white);
@@ -288,23 +281,20 @@ onMounted(() => {
 }
 @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.65; transform:scale(1.2)} }
 
-/* ===== Publicidad ===== */
+/* Publicidad */
 .tile-body-ads { flex: 1; position: relative; }
 .ads-stage-diegoexito { height: 100%; background: var(--diego-white); overflow: hidden; }
 .carousel-inner, .carousel-item { height: 100%; }
-
-/* Si algún slide usa imagen/video, que se vea completa */
 .carousel-item > img,
 .carousel-item > video,
 .ads-media {
   width: 100%; height: 100%;
   object-fit: contain; background: #000; display: block;
 }
-
 .ads-item { height: 100%; display: grid; place-items: center; padding: 2rem; }
 .offer-slide { text-align: center; width: 100%; color: var(--diego-red); }
 
-/* Logo y badges */
+/* Slides (colores, títulos...) */
 .logo-container { margin-bottom: 2rem; }
 .logo-circle {
   width: 120px; height: 120px; margin: 0 auto; border-radius: 50%;
@@ -337,7 +327,7 @@ onMounted(() => {
 .info-list { list-style: none; padding: 0; margin-bottom: 1.6rem; }
 .info-list li { font-size: 1.05rem; color: var(--diego-blue); font-weight: 600; margin-bottom: .7rem; text-align: left; }
 
-/* Controles */
+/* Controles carrusel */
 .carousel-control-diegoexito { width: 60px; opacity: 0; transition: opacity .25s ease; }
 .ads-stage-diegoexito:hover .carousel-control-diegoexito { opacity: .85; }
 .carousel-control-diegoexito:hover { opacity: 1 !important; }

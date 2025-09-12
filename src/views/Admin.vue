@@ -225,17 +225,12 @@ function clearCurrent() {
     confirmButtonText: 'Sí, finalizar'
   }).then(res => {
     if (res.isConfirmed) {
-      store.state.current = null
-      localStorage.setItem('digiturno_state_v1', JSON.stringify({
-        queue: Array.isArray(store.state.queue) ? store.state.queue : [],
-        current: store.state.current,
-        lastIssued: Number(store.state.lastIssued) || 0,
-        prefix: store.state.prefix || 'C'
-      }))
+      store.finishCurrent() // ✅ guarda como último atendido y limpia current
       Swal.fire('Finalizado', '', 'success')
     }
   })
 }
+
 
 function resetAll() {
   Swal.fire({

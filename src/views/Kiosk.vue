@@ -134,13 +134,6 @@
           <span>En cola</span>
           <span>{{ queueLength }}</span>
         </div>
-
-        <div class="tp-sep">--------------------------------</div>
-
-        <div class="tp-note">Muestra este ticket al ser llamado</div>
-        <div class="tp-thanks">¡Gracias por tu visita!</div>
-
-        <div class="tp-cut"> </div>
       </div>
     </div>
     <!-- ====== /TEMPLATE DE IMPRESIÓN ====== -->
@@ -241,11 +234,6 @@ function downloadTicketPdf() {
 
   y += 6
   doc.setDrawColor(0); doc.line(5, y, 75, y); y += 7
-
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(11)
-  doc.text('Muestra este ticket al ser llamado', cx, y, { align: 'center' }); y += 6
-  doc.setFont('helvetica', 'bold')
-  doc.text('¡Gracias por tu visita!', cx, y, { align: 'center' })
 
   const filename = `ticket_${String(ticket.value).replace(/\s+/g, '')}.pdf`
   doc.save(filename) // ← dispara la descarga

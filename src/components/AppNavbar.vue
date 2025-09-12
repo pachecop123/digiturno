@@ -4,7 +4,7 @@
       <!-- Brand -->
       <RouterLink class="navbar-brand brand d-flex align-items-center gap-2" to="/">
         <span class="brand-mark"><i class="bi bi-people-fill"></i></span>
-        <span class="brand-text">Digiturno</span>
+        <span class="brand-text">DIEGO EXITO</span>
       </RouterLink>
 
       <!-- Toggler -->

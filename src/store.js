@@ -9,6 +9,7 @@ const state = reactive({
   current: null,     // en atención
   lastIssued: 0,     // contador
   prefix: 'C',       // prefijo
+  lastAttended: null,// último atendido ✅
   ts: 0,             // marca de tiempo para ordenar estados
 })
 
@@ -31,21 +32,22 @@ function toPlain() {
     current: state.current ?? null,
     lastIssued: Number(state.lastIssued) || 0,
     prefix: state.prefix || 'C',
+    lastAttended: state.lastAttended ?? null,     // ✅ incluir en payload
     ts: Date.now(),
   }
 }
 
 function apply(data) {
   if (!data || typeof data !== 'object') return
-  // evita aplicar estados más antiguos
   if (state.ts && data.ts && data.ts <= state.ts) return
 
   const nextQueue = Array.isArray(data.queue) ? data.queue : []
   state.queue.splice(0, state.queue.length, ...nextQueue)
-  state.current    = data.current ?? null
-  state.lastIssued = Number(data.lastIssued || 0)
-  state.prefix     = data.prefix || 'C'
-  state.ts         = data.ts || Date.now()
+  state.current      = data.current ?? null
+  state.lastIssued   = Number(data.lastIssued || 0)
+  state.prefix       = data.prefix || 'C'
+  state.lastAttended = data.lastAttended ?? null  // ✅ aplicar remoto
+  state.ts           = data.ts || Date.now()
 }
 
 function saveAndSync() {
@@ -71,10 +73,20 @@ function callNext() {
   return next
 }
 
+/** ✅ NO auto-avanza — Solo finaliza el actual */
+function finalizeCurrent() {
+  if (!state.current) return null
+  state.lastAttended = state.current
+  state.current = null
+  saveAndSync()
+  return state.lastAttended
+}
+
 function resetQueue() {
   state.queue.splice(0)
-  state.current    = null
-  state.lastIssued = 0
+  state.current      = null
+  state.lastIssued   = 0
+  state.lastAttended = null   // ✅ limpiar también
   saveAndSync()
 }
 
@@ -107,7 +119,7 @@ if (channel) {
   }
 }
 
-/* Fallback de seguridad por si el navegador bloquea algo */
+/* Fallback por si BroadcastChannel falla (polling ligero) */
 const ENABLE_POLL = true
 if (ENABLE_POLL) {
   let lastSeenTS = state.ts
@@ -124,4 +136,4 @@ if (ENABLE_POLL) {
   }, 2500)
 }
 
-export default { state, issueTicket, callNext, resetQueue, setPrefix }
+export default { state, issueTicket, callNext, finalizeCurrent, resetQueue, setPrefix }
