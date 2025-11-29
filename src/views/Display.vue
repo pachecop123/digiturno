@@ -1,5 +1,15 @@
 <template>
-  <div class="display-diegoexito">
+  <div class="display-diegoexito" ref="rootEl">
+    <!-- Botón flotante: Pantalla completa / Salir -->
+    <button
+      class="fs-btn btn btn-light btn-sm shadow"
+      type="button"
+      @click="toggleFullscreen"
+      :title="isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'"
+    >
+      <i :class="isFullscreen ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen'"></i>
+    </button>
+
     <div class="container-xl py-4">
       <div class="display-grid-enhanced">
         <!-- Turno -->
@@ -13,7 +23,6 @@
 
           <div class="tile-body-modern">
             <div class="turn-wrapper">
-              <!-- 👇 Mostrar SIEMPRE "showing" -->
               <div class="turn-number-carniceria" :class="{ 'animate-number': popAnim }">
                 {{ showing }}
               </div>
@@ -27,7 +36,7 @@
           </footer>
         </section>
 
-        <!-- Publicidad Diego Éxito -->
+        <!-- Publicidad -->
         <section class="tile tile-ads-diegoexito">
           <header class="tile-head-carniceria">
             <div class="icon-wrapper-carniceria">
@@ -90,7 +99,6 @@
                   </div>
                 </div>
 
-                <!-- Controles -->
                 <button class="carousel-control-prev carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="prev">
                   <span class="carousel-control-prev-icon control-icon-diegoexito" aria-hidden="true"></span>
                   <span class="visually-hidden">Anterior</span>
@@ -113,20 +121,20 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import store from '../store'
 
-/* Derivados seguros del store */
+/* Derivados del store */
 const current      = computed(() => store.state?.current ?? null)
 const lastAttended = computed(() => store.state?.lastAttended ?? null)
 const prefix       = computed(() => store.state?.prefix || 'C')
 const queue        = computed(() => Array.isArray(store.state?.queue) ? store.state.queue : [])
 
-/* Número a mostrar (prioridad):
+/* Prioridad de visualización:
    1) en atención
    2) último atendido
    3) primero en cola
-   4) prefijo-000 (fallback)
+   4) prefijo-000
 */
 const showing = computed(() =>
   current.value
@@ -135,7 +143,7 @@ const showing = computed(() =>
   || `${prefix.value}-000`
 )
 
-/* Animación cuando cambia lo que se muestra */
+/* Animación de número */
 const popAnim = ref(false)
 watch(showing, (n, o) => {
   if (n !== o) {
@@ -144,16 +152,98 @@ watch(showing, (n, o) => {
   }
 })
 
-/* (Opcional) Auto-avanzar si no hay current */
-const AUTO_ADVANCE = false
-onMounted(() => {
-  if (AUTO_ADVANCE && !current.value && queue.value.length) {
-    store.callNext?.()
+/* ===== Pantalla completa ===== */
+const rootEl = ref(null)
+const isFullscreen = ref(false)
+
+function getFullscreenElement() {
+  return document.fullscreenElement
+    || document.webkitFullscreenElement
+    || document.mozFullScreenElement
+    || document.msFullscreenElement
+}
+
+function requestFs(el) {
+  return (
+    el.requestFullscreen?.()
+    || el.webkitRequestFullscreen?.()
+    || el.mozRequestFullScreen?.()
+    || el.msRequestFullscreen?.()
+  )
+}
+
+function exitFs() {
+  return (
+    document.exitFullscreen?.()
+    || document.webkitExitFullscreen?.()
+    || document.mozCancelFullScreen?.()
+    || document.msExitFullscreen?.()
+  )
+}
+
+async function enterFullscreen() {
+  const el = rootEl.value || document.documentElement
+  try {
+    const r = requestFs(el)
+    if (r && typeof r.then === 'function') await r
+  } catch {
+    // Si falla (p.ej. iOS Safari), hacemos modo "kiosco" visual
   }
+  // Forzamos ocultar navbar aunque el FS no esté disponible
+  document.body.classList.add('hide-navbar')
+  isFullscreen.value = !!getFullscreenElement() || true
+}
+
+async function leaveFullscreen() {
+  try { await exitFs() } catch {}
+  document.body.classList.remove('hide-navbar')
+  isFullscreen.value = !!getFullscreenElement() && false
+}
+
+function onFsChange() {
+  const fs = !!getFullscreenElement()
+  isFullscreen.value = fs
+  document.body.classList.toggle('hide-navbar', fs)
+}
+
+function toggleFullscreen() {
+  if (isFullscreen.value || getFullscreenElement()) {
+    leaveFullscreen()
+  } else {
+    enterFullscreen()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('fullscreenchange', onFsChange)
+  document.addEventListener('webkitfullscreenchange', onFsChange)
+  document.addEventListener('mozfullscreenchange', onFsChange)
+  document.addEventListener('MSFullscreenChange', onFsChange)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', onFsChange)
+  document.removeEventListener('webkitfullscreenchange', onFsChange)
+  document.removeEventListener('mozfullscreenchange', onFsChange)
+  document.removeEventListener('MSFullscreenChange', onFsChange)
 })
 </script>
 
 <style scoped>
+/* ===== Botón flotante de pantalla completa ===== */
+.fs-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1060; /* por encima de carousel */
+  border-radius: 10px;
+  padding: .4rem .6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.fs-btn i { font-size: 1.1rem; }
+
 /* =========================
    Paleta y sizing (scoped)
    ========================= */
@@ -165,11 +255,9 @@ onMounted(() => {
   --diego-blue-dark: #1D4ED8;
   --diego-white: #FFFFFF;
   --diego-cream: #FEF7ED;
-
   --panel-h: clamp(400px, 72dvh, 920px);
 }
 
-/* Fondo y base */
 .display-diegoexito {
   background: radial-gradient(ellipse at top, var(--diego-red) 0%, var(--diego-red-dark) 35%, #8B0000 100%);
   background-attachment: fixed;
@@ -177,6 +265,7 @@ onMounted(() => {
   color: var(--diego-white);
   position: relative;
 }
+
 .display-diegoexito::before {
   content: '';
   position: absolute; inset: 0;
@@ -184,9 +273,9 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(0.5px);
   backdrop-filter: blur(0.5px);
 }
+
 .container-xl { position: relative; z-index: 1; }
 
-/* Grid */
 .display-grid-enhanced {
   display: grid;
   gap: 2rem;
@@ -200,7 +289,7 @@ onMounted(() => {
   }
 }
 
-/* Tarjeta base */
+/* Tarjetas */
 .tile {
   background: rgba(255, 255, 255, 0.96);
   border: 2px solid rgba(196, 30, 58, 0.28);
@@ -218,22 +307,17 @@ onMounted(() => {
   position: absolute; left: 0; right: 0; top: 0; height: 3px;
   background: linear-gradient(90deg, var(--diego-red) 0%, var(--diego-blue) 50%, var(--diego-red) 100%);
 }
-.tile:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 50px rgba(196, 30, 58, 0.35);
-}
+.tile:hover { transform: translateY(-4px); box-shadow: 0 18px 50px rgba(196, 30, 58, 0.35); }
 
-/* Headers */
+/* Header */
 .tile-head-carniceria {
   background: linear-gradient(135deg, var(--diego-red) 0%, var(--diego-red-dark) 100%);
   padding: 1.25rem 1.5rem;
   display: flex; align-items: center; gap: 1rem;
-  position: relative;
 }
 .icon-wrapper-carniceria {
   background: var(--diego-white); color: var(--diego-red);
-  padding: .7rem; border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, .18);
+  padding: .7rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, .18);
   display: grid; place-items: center;
 }
 .icon-wrapper-carniceria i { font-size: 1.25rem; }
@@ -293,8 +377,6 @@ onMounted(() => {
 }
 .ads-item { height: 100%; display: grid; place-items: center; padding: 2rem; }
 .offer-slide { text-align: center; width: 100%; color: var(--diego-red); }
-
-/* Slides (colores, títulos...) */
 .logo-container { margin-bottom: 2rem; }
 .logo-circle {
   width: 120px; height: 120px; margin: 0 auto; border-radius: 50%;
@@ -302,7 +384,6 @@ onMounted(() => {
   display: grid; place-items: center; box-shadow: 0 8px 25px rgba(196,30,58,.35);
 }
 .logo-content { color: #fff; font-size: 2rem; display: grid; gap: .5rem; place-items: center; }
-
 .offer-title { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 900; color: var(--diego-red); margin-bottom: 1rem; text-shadow: 0 2px 4px rgba(196,30,58,.18); }
 .offer-subtitle { font-size: 1.1rem; color: var(--diego-blue); font-weight: 600; margin-bottom: 1.6rem; }
 .offer-badge {
@@ -310,22 +391,6 @@ onMounted(() => {
   color: #fff; padding: .65rem 1.3rem; border-radius: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
   display: inline-block; box-shadow: 0 4px 15px rgba(30,64,175,.28);
 }
-
-/* Promoción */
-.offer-special { background: linear-gradient(135deg, var(--diego-red) 0%, var(--diego-red-dark) 100%); color: #fff; border-radius: 14px; padding: 2.6rem 1.8rem; }
-.special-title { font-size: 1.9rem; font-weight: 900; margin-bottom: .8rem; text-transform: uppercase; letter-spacing: .1em; }
-.special-product { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.6rem; color: var(--diego-cream); }
-.price-display { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: .8rem; }
-.price-old { font-size: 1.1rem; text-decoration: line-through; color: rgba(255,255,255,.7); }
-.price-new { font-size: 2.2rem; font-weight: 900; color: var(--diego-cream); text-shadow: 0 2px 4px rgba(0,0,0,.25); }
-.price-unit { font-size: .95rem; color: rgba(255,255,255,.9); margin-bottom: 1.6rem; }
-
-/* Info */
-.offer-info { padding: 2rem; }
-.info-icon { font-size: 3.6rem; margin-bottom: 1rem; }
-.info-title { font-size: 1.7rem; font-weight: 800; color: var(--diego-red); margin-bottom: 1.6rem; text-transform: uppercase; }
-.info-list { list-style: none; padding: 0; margin-bottom: 1.6rem; }
-.info-list li { font-size: 1.05rem; color: var(--diego-blue); font-weight: 600; margin-bottom: .7rem; text-align: left; }
 
 /* Controles carrusel */
 .carousel-control-diegoexito { width: 60px; opacity: 0; transition: opacity .25s ease; }
@@ -352,4 +417,9 @@ onMounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .tile, .tile:hover, .animate-number, .carousel { animation: none !important; transition: none !important; }
 }
+</style>
+
+<!-- ❗️Regla GLOBAL para ocultar el navbar cuando haya fullscreen -->
+<style>
+.hide-navbar .app-navbar { display: none !important; }
 </style>
