@@ -161,7 +161,7 @@
 <script setup>
 import store from '../store'
 import Swal from 'sweetalert2'
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 
 /* Estado local */
 const soundOn = ref(true)
@@ -203,13 +203,17 @@ async function callNext() {
   if (calling.value) return
   calling.value = true
   try {
-    const next = store.callNext?.()
-    if (!next) {
+    // Verificar si hay turnos en la cola antes de llamar
+    if (queueLength.value === 0) {
       Swal.fire('Sin turnos', 'La cola está vacía', 'info')
       return
     }
+    // Obtener el siguiente turno antes de emitir la acción
+    const nextTurn = queue.value[0]
+    store.callNext?.()
     beep()
-    Swal.fire({ title: 'Llamando', text: `Turno ${next}`, icon: 'info', timer: 1100, showConfirmButton: false })
+    // Mostrar el turno que se está llamando
+    Swal.fire({ title: 'Llamando', text: `Turno ${nextTurn}`, icon: 'info', timer: 1100, showConfirmButton: false })
   } finally {
     setTimeout(() => (calling.value = false), 200)
   }
