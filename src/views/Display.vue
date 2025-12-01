@@ -54,9 +54,9 @@
             </div>
           </div>
 
-          <div v-else id="adsCarousel" class="tile-body-ads carousel slide" data-bs-ride="false">
-            <div class="carousel-inner" ref="carouselInner">
-              <div v-for="(ad, index) in ads" :key="`ad-${index}-${ad.name}`" class="carousel-item" :class="{ active: index === 0 }">
+          <div v-else id="adsCarousel" ref="carouselElRef" class="tile-body-ads carousel slide" data-bs-ride="carousel" data-bs-interval="5000" data-bs-wrap="true">
+            <div class="carousel-inner">
+              <div v-for="(ad, index) in ads" :key="ad.name" class="carousel-item" :class="{ active: index === 0 }">
                 <img v-if="ad.type === 'image'" :src="ad.path" class="ads-media" :alt="ad.name" loading="lazy" />
                 <video v-else-if="ad.type === 'video'" :ref="`video-${index}`" class="ads-media" muted loop playsinline>
                   <source :src="ad.path" type="video/mp4">
@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import store from '../store'
 
 /* Derivados del store */
@@ -99,43 +99,23 @@ const ads = ref([])
 async function loadAds() {
   try {
     const response = await fetch('/api/ads', {
-      cache: 'no-cache', // Asegurar que siempre obtenemos la lista actualizada
+      cache: 'no-cache',
     })
     const data = await response.json()
-
-    // Filtrar el logo de la lista de anuncios
     ads.value = data.filter(ad => ad.name !== 'logo.png')
-
-    // Pre-cargar imágenes para mejor rendimiento
-    ads.value.forEach(ad => {
-      if (ad.type === 'image') {
-        const img = new Image()
-        img.src = ad.path
-      }
-    })
   } catch (error) {
     console.error('Error cargando publicidades:', error)
-    // Fallback a publicidades por defecto
     ads.value = [
       { path: '/ads/ad1.jpg', type: 'image', name: 'ad1.jpg' },
       { path: '/ads/ad2.jpg', type: 'image', name: 'ad2.jpg' },
-      { path: '/ads/ad3.jpg', type: 'image', name: 'ad3.jpg' },
-      { path: '/ads/video1.mp4', type: 'video', name: 'video1.mp4' }
+      { path: '/ads/video1.mp4', type: 'video', name: 'video1.mp4' },
     ]
   }
 }
 
-/* Prioridad de visualización:
-   1) en atención
-   2) último atendido
-   3) primero en cola
-   4) prefijo-000
-*/
+/* Prioridad de visualización */
 const showing = computed(() =>
-  current.value
-  || lastAttended.value
-  || queue.value[0]
-  || `${prefix.value}-000`
+  current.value || lastAttended.value || queue.value[0] || `${prefix.value}-000`
 )
 
 /* Animación de número */
@@ -150,50 +130,29 @@ watch(showing, (n, o) => {
 /* ===== Pantalla completa ===== */
 const rootEl = ref(null)
 const isFullscreen = ref(false)
-const carouselInner = ref(null)
 
 function getFullscreenElement() {
-  return document.fullscreenElement
-    || document.webkitFullscreenElement
-    || document.mozFullScreenElement
-    || document.msFullscreenElement
+  return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement
 }
 
 function requestFs(el) {
-  return (
-    el.requestFullscreen?.()
-    || el.webkitRequestFullscreen?.()
-    || el.mozRequestFullScreen?.()
-    || el.msRequestFullscreen?.()
-  )
+  return el.requestFullscreen?.() || el.webkitRequestFullscreen?.() || el.mozRequestFullScreen?.() || el.msRequestFullscreen?.()
 }
 
 function exitFs() {
-  return (
-    document.exitFullscreen?.()
-    || document.webkitExitFullscreen?.()
-    || document.mozCancelFullScreen?.()
-    || document.msExitFullscreen?.()
-  )
+  return document.exitFullscreen?.() || document.webkitExitFullscreen?.() || document.mozCancelFullScreen?.() || document.msExitFullscreen?.()
 }
 
-async function enterFullscreen() {
-  const el = rootEl.value || document.documentElement
-  try {
-    const r = requestFs(el)
-    if (r && typeof r.then === 'function') await r
-  } catch {
-    // Si falla (p.ej. iOS Safari), hacemos modo "kiosco" visual
+async function toggleFullscreen() {
+  if (getFullscreenElement()) {
+    try { await exitFs() } catch {}
+  } else {
+    const el = rootEl.value || document.documentElement
+    try {
+      const r = requestFs(el)
+      if (r && typeof r.then === 'function') await r
+    } catch {}
   }
-  // Forzamos ocultar navbar aunque el FS no esté disponible
-  document.body.classList.add('hide-navbar')
-  isFullscreen.value = !!getFullscreenElement() || true
-}
-
-async function leaveFullscreen() {
-  try { await exitFs() } catch {}
-  document.body.classList.remove('hide-navbar')
-  isFullscreen.value = !!getFullscreenElement() && false
 }
 
 function onFsChange() {
@@ -202,61 +161,39 @@ function onFsChange() {
   document.body.classList.toggle('hide-navbar', fs)
 }
 
-function toggleFullscreen() {
-  if (isFullscreen.value || getFullscreenElement()) {
-    leaveFullscreen()
-  } else {
-    enterFullscreen()
-  }
-}
+/* ===== Carrusel (Control de Video) ===== */
+const carouselElRef = ref(null)
 
-/* Control de videos en carrusel */
-function handleCarouselSlide() {
-  if (!carouselInner.value) return
-
-  const videos = carouselInner.value.querySelectorAll('video')
-  videos.forEach((video, index) => {
-    const item = video.closest('.carousel-item')
-    if (item?.classList.contains('active')) {
-      video.play().catch(() => {})
-    } else {
-      video.pause()
-      video.currentTime = 0
-    }
-  })
-}
-
-/* Auto-actualización de anuncios cada 5 minutos */
-let adsRefreshInterval = null
-let carouselInstance = null
-
-function initCarousel() {
-  const carouselEl = document.getElementById('adsCarousel')
+// Esta función se dispara cuando el carrusel empieza a cambiar de slide
+function handleCarouselSlide(event) {
+  // El evento es `null` en la llamada inicial
+  const activeIndex = event ? event.to : 0
+  
+  const carouselEl = carouselElRef.value
   if (!carouselEl) return
+  
+  const carouselItems = carouselEl.querySelectorAll('.carousel-item')
+  if (!carouselItems.length) return
 
-  // Destruir instancia anterior si existe
-  if (carouselInstance) {
-    try {
-      carouselInstance.dispose()
-    } catch (e) {}
-  }
-
-  // Importar Bootstrap Carousel dinámicamente
-  import('bootstrap/dist/js/bootstrap.bundle.min.js').then((bootstrap) => {
-    carouselInstance = new bootstrap.Carousel(carouselEl, {
-      interval: 6000,
-      ride: 'carousel',
-      pause: false,
-      wrap: true
-    })
-
-    // Configurar evento de slide
-    carouselEl.addEventListener('slide.bs.carousel', handleCarouselSlide)
-
-    // Iniciar videos si es el primer slide
-    handleCarouselSlide()
+  // Pausar todos los videos
+  carouselEl.querySelectorAll('video').forEach(video => {
+    video.pause()
   })
+  
+  // Reproducir el video del slide que va a quedar activo
+  const activeItem = carouselItems[activeIndex]
+  const videoToPlay = activeItem?.querySelector('video')
+  
+  if (videoToPlay) {
+    videoToPlay.currentTime = 0
+    videoToPlay.play().catch(() => {
+      // Silenciar errores de autoplay
+    })
+  }
 }
+
+/* Auto-actualización de anuncios */
+let adsRefreshInterval = null
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', onFsChange)
@@ -264,20 +201,23 @@ onMounted(() => {
   document.addEventListener('mozfullscreenchange', onFsChange)
   document.addEventListener('MSFullscreenChange', onFsChange)
 
+  // Añadir el listener para controlar los videos
+  const carouselEl = carouselElRef.value
+  if (carouselEl) {
+    carouselEl.addEventListener('slide.bs.carousel', handleCarouselSlide)
+  }
+
   loadAds().then(() => {
-    // Esperar a que Vue renderice el DOM
-    setTimeout(() => {
-      initCarousel()
-    }, 150)
+    // Cuando los anuncios cargan, el DOM se actualiza
+    // Esperamos un tick para asegurarnos de que el DOM esté listo
+    nextTick(() => {
+      // Revisar si el primer slide (que está activo por defecto) tiene un video para reproducirlo
+      handleCarouselSlide(null)
+    })
   })
 
-  // Auto-actualizar anuncios cada 5 minutos
   adsRefreshInterval = setInterval(() => {
-    loadAds().then(() => {
-      setTimeout(() => {
-        initCarousel()
-      }, 200)
-    })
+    loadAds()
   }, 5 * 60 * 1000)
 })
 
@@ -287,19 +227,12 @@ onBeforeUnmount(() => {
   document.removeEventListener('mozfullscreenchange', onFsChange)
   document.removeEventListener('MSFullscreenChange', onFsChange)
 
-  const carousel = document.getElementById('adsCarousel')
-  if (carousel) {
-    carousel.removeEventListener('slide.bs.carousel', handleCarouselSlide)
+  // Limpiar el listener del carrusel
+  const carouselEl = carouselElRef.value
+  if (carouselEl) {
+    carouselEl.removeEventListener('slide.bs.carousel', handleCarouselSlide)
   }
 
-  // Destruir instancia de carousel
-  if (carouselInstance) {
-    try {
-      carouselInstance.dispose()
-    } catch (e) {}
-  }
-
-  // Limpiar intervalo de actualización
   if (adsRefreshInterval) {
     clearInterval(adsRefreshInterval)
   }
@@ -479,7 +412,7 @@ onBeforeUnmount(() => {
 .tile-body-ads .carousel-item {
   width: 100%;
   height: 100%;
-  display: flex !important;
+  /* display: flex !important; */ /* <- ESTO ROMPE EL CARRUSEL */
   align-items: center;
   justify-content: center;
 }
@@ -488,7 +421,7 @@ onBeforeUnmount(() => {
 .tile-body-ads .carousel-item.active,
 .tile-body-ads .carousel-item-next,
 .tile-body-ads .carousel-item-prev {
-  display: flex !important;
+  /* display: flex !important; */ /* <- ESTO ROMPE EL CARRUSEL */
 }
 
 /* Imágenes y videos se ajustan al contenedor */
