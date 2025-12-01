@@ -115,13 +115,8 @@ async function loadAds() {
     })
   } catch (error) {
     console.error('Error cargando publicidades:', error)
-    // Fallback a publicidades por defecto
-    ads.value = [
-      { path: '/ads/ad1.jpg', type: 'image', name: 'ad1.jpg' },
-      { path: '/ads/ad2.jpg', type: 'image', name: 'ad2.jpg' },
-      { path: '/ads/ad3.jpg', type: 'image', name: 'ad3.jpg' },
-      { path: '/ads/video1.mp4', type: 'video', name: 'video1.mp4' }
-    ]
+    // No hay imágenes por defecto, solo se muestran las subidas
+    ads.value = []
   }
 }
 
