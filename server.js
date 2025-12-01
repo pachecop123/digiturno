@@ -4,6 +4,9 @@ import { Server } from 'socket.io'
 import cors from 'cors'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import { readdir, unlink, writeFile } from 'fs/promises'
+import { existsSync } from 'fs'
+import multer from 'multer'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -31,9 +34,112 @@ let sharedState = {
 app.use(cors())
 app.use(express.json())
 
+// Servir archivos estáticos de la carpeta public
+app.use(express.static(join(__dirname, 'public')))
+
+// Configurar multer para carga de archivos
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, join(__dirname, 'public', 'ads'))
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    const ext = file.originalname.split('.').pop()
+    cb(null, 'ad-' + uniqueSuffix + '.' + ext)
+  }
+})
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'video/mp4']
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true)
+    } else {
+      cb(new Error('Tipo de archivo no permitido. Solo JPG, PNG y MP4'))
+    }
+  }
+})
+
 // Ruta para obtener el estado actual (opcional, para debugging)
 app.get('/api/state', (req, res) => {
   res.json(sharedState)
+})
+
+// API para gestión de publicidad
+app.get('/api/ads', async (req, res) => {
+  try {
+    const adsDir = join(__dirname, 'public', 'ads')
+    if (!existsSync(adsDir)) {
+      return res.json([])
+    }
+
+    const files = await readdir(adsDir)
+    const ads = files
+      .filter(file => {
+        const ext = file.toLowerCase().split('.').pop()
+        return ['jpg', 'jpeg', 'png', 'mp4'].includes(ext)
+      })
+      .map(file => {
+        const ext = file.toLowerCase().split('.').pop()
+        return {
+          name: file,
+          path: `/ads/${file}`,
+          type: ext === 'mp4' ? 'video' : 'image'
+        }
+      })
+
+    res.json(ads)
+  } catch (error) {
+    console.error('Error listando publicidades:', error)
+    res.status(500).json({ error: 'Error al listar publicidades' })
+  }
+})
+
+app.post('/api/ads/upload', upload.single('ad'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se recibió ningún archivo' })
+    }
+
+    res.json({
+      message: 'Archivo subido exitosamente',
+      filename: req.file.filename,
+      path: `/ads/${req.file.filename}`
+    })
+  } catch (error) {
+    console.error('Error subiendo publicidad:', error)
+    res.status(500).json({ error: 'Error al subir publicidad' })
+  }
+})
+
+app.delete('/api/ads/:filename', async (req, res) => {
+  try {
+    const filename = req.params.filename
+
+    // Proteger el logo
+    if (filename === 'logo.png') {
+      return res.status(403).json({ error: 'El logo no puede ser eliminado' })
+    }
+
+    // Prevenir eliminación de archivos originales
+    if (['ad1.jpg', 'ad2.jpg', 'ad3.jpg', 'video1.mp4'].includes(filename)) {
+      return res.status(403).json({ error: 'Los archivos de ejemplo no pueden ser eliminados' })
+    }
+
+    const filePath = join(__dirname, 'public', 'ads', filename)
+
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Archivo no encontrado' })
+    }
+
+    await unlink(filePath)
+    res.json({ message: 'Archivo eliminado exitosamente' })
+  } catch (error) {
+    console.error('Error eliminando publicidad:', error)
+    res.status(500).json({ error: 'Error al eliminar publicidad' })
+  }
 })
 
 // Solo para producción: servir archivos estáticos

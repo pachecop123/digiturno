@@ -45,70 +45,33 @@
             <span class="section-title">Diego Éxito - Ofertas</span>
           </header>
 
-          <div class="tile-body-ads">
-            <div class="ads-stage-diegoexito">
-              <div id="adsCarousel" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="6000">
-                <div class="carousel-inner h-100">
-                  <div class="carousel-item h-100 active">
-                    <div class="ads-item">
-                      <div class="offer-slide">
-                        <div class="logo-container">
-                          <div class="logo-circle">
-                            <div class="logo-content">
-                              <div class="people-icon">👥</div>
-                              <div class="cart-icon">🛒</div>
-                            </div>
-                          </div>
-                        </div>
-                        <h2 class="offer-title">¡CARNES FRESCAS!</h2>
-                        <p class="offer-subtitle">La mejor calidad al mejor precio</p>
-                        <div class="offer-badge">SIEMPRE CONTIGO</div>
-                      </div>
-                    </div>
-                  </div>
+          <div class="tile-body-ads" v-if="ads.length === 0">
+            <div class="ads-loading">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando publicidad...</span>
+              </div>
+              <p class="mt-3">Cargando publicidad...</p>
+            </div>
+          </div>
 
-                  <div class="carousel-item h-100">
-                    <div class="ads-item">
-                      <div class="offer-slide offer-special">
-                        <h1 class="special-title">PROMOCIÓN</h1>
-                        <h2 class="special-product">CARNE DE RES</h2>
-                        <div class="price-display">
-                          <span class="price-old">$25.000</span>
-                          <span class="price-new">$20.000</span>
-                        </div>
-                        <p class="price-unit">Por kilogramo</p>
-                        <div class="offer-badge">¡OFERTA LIMITADA!</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="carousel-item h-100">
-                    <div class="ads-item">
-                      <div class="offer-slide offer-info">
-                        <div class="info-icon">🥩</div>
-                        <h2 class="info-title">CARNICERÍA DIEGO ÉXITO</h2>
-                        <ul class="info-list">
-                          <li>✓ Carnes frescas diarias</li>
-                          <li>✓ Cortes especializados</li>
-                          <li>✓ Atención personalizada</li>
-                          <li>✓ Los mejores precios</li>
-                        </ul>
-                        <div class="offer-badge">CALIDAD GARANTIZADA</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <button class="carousel-control-prev carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="prev">
-                  <span class="carousel-control-prev-icon control-icon-diegoexito" aria-hidden="true"></span>
-                  <span class="visually-hidden">Anterior</span>
-                </button>
-                <button class="carousel-control-next carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="next">
-                  <span class="carousel-control-next-icon control-icon-diegoexito" aria-hidden="true"></span>
-                  <span class="visually-hidden">Siguiente</span>
-                </button>
+          <div v-else id="adsCarousel" class="tile-body-ads carousel slide" data-bs-ride="carousel" data-bs-interval="6000">
+            <div class="carousel-inner" ref="carouselInner">
+              <div v-for="(ad, index) in ads" :key="ad.path" class="carousel-item" :class="{ active: index === 0 }">
+                <img v-if="ad.type === 'image'" :src="ad.path" class="ads-media" :alt="ad.name" loading="lazy" />
+                <video v-else-if="ad.type === 'video'" :ref="`video-${index}`" class="ads-media" muted loop playsinline>
+                  <source :src="ad.path" type="video/mp4">
+                </video>
               </div>
             </div>
+
+            <button v-if="ads.length > 1" class="carousel-control-prev carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon control-icon-diegoexito" aria-hidden="true"></span>
+              <span class="visually-hidden">Anterior</span>
+            </button>
+            <button v-if="ads.length > 1" class="carousel-control-next carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon control-icon-diegoexito" aria-hidden="true"></span>
+              <span class="visually-hidden">Siguiente</span>
+            </button>
           </div>
 
           <footer class="tile-foot-carniceria">
@@ -129,6 +92,38 @@ const current      = computed(() => store.state?.current ?? null)
 const lastAttended = computed(() => store.state?.lastAttended ?? null)
 const prefix       = computed(() => store.state?.prefix || 'C')
 const queue        = computed(() => Array.isArray(store.state?.queue) ? store.state.queue : [])
+
+/* Publicidades */
+const ads = ref([])
+
+async function loadAds() {
+  try {
+    const response = await fetch('/api/ads', {
+      cache: 'no-cache', // Asegurar que siempre obtenemos la lista actualizada
+    })
+    const data = await response.json()
+
+    // Filtrar el logo de la lista de anuncios
+    ads.value = data.filter(ad => ad.name !== 'logo.png')
+
+    // Pre-cargar imágenes para mejor rendimiento
+    ads.value.forEach(ad => {
+      if (ad.type === 'image') {
+        const img = new Image()
+        img.src = ad.path
+      }
+    })
+  } catch (error) {
+    console.error('Error cargando publicidades:', error)
+    // Fallback a publicidades por defecto
+    ads.value = [
+      { path: '/ads/ad1.jpg', type: 'image', name: 'ad1.jpg' },
+      { path: '/ads/ad2.jpg', type: 'image', name: 'ad2.jpg' },
+      { path: '/ads/ad3.jpg', type: 'image', name: 'ad3.jpg' },
+      { path: '/ads/video1.mp4', type: 'video', name: 'video1.mp4' }
+    ]
+  }
+}
 
 /* Prioridad de visualización:
    1) en atención
@@ -155,6 +150,7 @@ watch(showing, (n, o) => {
 /* ===== Pantalla completa ===== */
 const rootEl = ref(null)
 const isFullscreen = ref(false)
+const carouselInner = ref(null)
 
 function getFullscreenElement() {
   return document.fullscreenElement
@@ -214,11 +210,51 @@ function toggleFullscreen() {
   }
 }
 
+/* Control de videos en carrusel */
+function handleCarouselSlide() {
+  if (!carouselInner.value) return
+
+  const videos = carouselInner.value.querySelectorAll('video')
+  videos.forEach((video, index) => {
+    const item = video.closest('.carousel-item')
+    if (item?.classList.contains('active')) {
+      video.play().catch(() => {})
+    } else {
+      video.pause()
+      video.currentTime = 0
+    }
+  })
+}
+
+/* Auto-actualización de anuncios cada 5 minutos */
+let adsRefreshInterval = null
+
 onMounted(() => {
   document.addEventListener('fullscreenchange', onFsChange)
   document.addEventListener('webkitfullscreenchange', onFsChange)
   document.addEventListener('mozfullscreenchange', onFsChange)
   document.addEventListener('MSFullscreenChange', onFsChange)
+
+  loadAds().then(() => {
+    // Configurar evento del carrusel después de cargar los anuncios
+    setTimeout(() => {
+      const carousel = document.getElementById('adsCarousel')
+      if (carousel) {
+        carousel.addEventListener('slide.bs.carousel', handleCarouselSlide)
+        // Reproducir el primer video si existe
+        handleCarouselSlide()
+      }
+    }, 100)
+  })
+
+  // Auto-actualizar anuncios cada 5 minutos
+  adsRefreshInterval = setInterval(() => {
+    loadAds().then(() => {
+      setTimeout(() => {
+        handleCarouselSlide()
+      }, 200)
+    })
+  }, 5 * 60 * 1000)
 })
 
 onBeforeUnmount(() => {
@@ -226,6 +262,16 @@ onBeforeUnmount(() => {
   document.removeEventListener('webkitfullscreenchange', onFsChange)
   document.removeEventListener('mozfullscreenchange', onFsChange)
   document.removeEventListener('MSFullscreenChange', onFsChange)
+
+  const carousel = document.getElementById('adsCarousel')
+  if (carousel) {
+    carousel.removeEventListener('slide.bs.carousel', handleCarouselSlide)
+  }
+
+  // Limpiar intervalo de actualización
+  if (adsRefreshInterval) {
+    clearInterval(adsRefreshInterval)
+  }
 })
 </script>
 
@@ -284,7 +330,7 @@ onBeforeUnmount(() => {
 }
 @media (min-width: 768px) {
   .display-grid-enhanced {
-    grid-template-columns: 1.35fr 1fr;
+    grid-template-columns: 1fr 2fr;
     align-items: stretch;
   }
 }
@@ -365,15 +411,55 @@ onBeforeUnmount(() => {
 }
 @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.65; transform:scale(1.2)} }
 
-/* Publicidad */
-.tile-body-ads { flex: 1; position: relative; }
-.ads-stage-diegoexito { height: 100%; background: var(--diego-white); overflow: hidden; }
-.carousel-inner, .carousel-item { height: 100%; }
-.carousel-item > img,
-.carousel-item > video,
-.ads-media {
-  width: 100%; height: 100%;
-  object-fit: contain; background: #000; display: block;
+/* Publicidad - Contenedor principal */
+.tile-body-ads {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Estado de carga */
+.tile-body-ads .ads-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #6c757d;
+}
+
+/* Carrusel ocupa todo el espacio */
+.tile-body-ads.carousel {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tile-body-ads .carousel-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.tile-body-ads .carousel-item {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s ease-in-out;
+}
+
+/* Imágenes y videos ocupan todo */
+.tile-body-ads .ads-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  background: #000;
+  /* Optimización de renderizado */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 .ads-item { height: 100%; display: grid; place-items: center; padding: 2rem; }
 .offer-slide { text-align: center; width: 100%; color: var(--diego-red); }

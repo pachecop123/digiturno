@@ -139,6 +139,9 @@
                     <button class="btn btn-outline-danger" @click="resetAll">
                       <i class="bi bi-trash3 me-1"></i> Reiniciar cola
                     </button>
+                    <router-link to="/ads-manager" class="btn btn-outline-info">
+                      <i class="bi bi-images me-1"></i> Gestionar publicidad
+                    </router-link>
                     <button class="btn btn-outline-dark" @click="logoutAdmin">
                       <i class="bi bi-door-closed me-1"></i> Cerrar sesión admin
                     </button>
@@ -263,7 +266,9 @@ function onKey(e) {
   else if (e.key === 'Escape') { e.preventDefault(); clearCurrent() }
   else if (e.key.toLowerCase() === 'r') { e.preventDefault(); resetAll() }
 }
-onMounted(() => window.addEventListener('keydown', onKey))
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 </script>
 

@@ -3,7 +3,7 @@
     <div class="container-xl">
       <!-- Brand -->
       <RouterLink class="navbar-brand brand d-flex align-items-center gap-2" to="/">
-        <span class="brand-mark"><i class="bi bi-people-fill"></i></span>
+        <img src="/logo.png" alt="Diego Éxito" class="brand-logo">
         <span class="brand-text">DIEGO EXITO</span>
       </RouterLink>
 
@@ -128,6 +128,16 @@ function toggleTheme() {
 
 /* ========= Brand ========= */
 .brand-text { font-weight: 800; letter-spacing: .2px; }
+.brand-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.15));
+  transition: transform 0.2s ease;
+}
+.brand:hover .brand-logo {
+  transform: scale(1.05);
+}
 .brand-mark {
   width: 28px; height: 28px; border-radius: 10px;
   display: grid; place-items: center;

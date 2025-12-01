@@ -3,15 +3,21 @@ import Home from '../views/Home.vue'
 import Kiosk from '../views/Kiosk.vue'
 import Display from '../views/Display.vue'
 import Admin from '../views/Admin.vue'
+import AdsManager from '../views/AdsManager.vue'
 import Swal from 'sweetalert2'
 
 const routes = [
   { path: '/', component: Home },
   { path: '/kiosk', component: Kiosk },
   { path: '/display', component: Display },
-  { 
-    path: '/admin', 
+  {
+    path: '/admin',
     component: Admin,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/ads-manager',
+    component: AdsManager,
     meta: { requiresAuth: true }
   }
 ]
