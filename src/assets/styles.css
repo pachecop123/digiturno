@@ -13,6 +13,12 @@
   --fs-lg: clamp(1.5rem, 2.5vw + 0.5rem, 2.25rem);
   --fs-md: 1rem;
   --fs-sm: 0.9rem;
+
+  /* Variables para ajustar el centrado en pantalla completa */
+  --fullscreen-max-width: 1200px; /* Ancho máximo del grid en fullscreen */
+  --fullscreen-justify: center; /* Justificación horizontal: center, flex-start, flex-end, etc. */
+  --fullscreen-align: center; /* Alineación vertical: center, flex-start, flex-end, etc. */
+  --fullscreen-padding: 5; /* Padding interno del contenedor en fullscreen */
 }
 
 * { box-sizing: border-box; }
@@ -191,3 +197,15 @@ body { background: var(--bg); color: var(--text); }
 #ticket-print .tp-note { text-align: center; margin-top: 6px; }
 #ticket-print .tp-thanks { text-align: center; margin-top: 8px; font-weight: 700; }
 #ticket-print .tp-cut { margin-top: 8px; border-top: 1px dashed #000; height: 0; }
+
+#app > div > div > div > section.tile.tile-ads-diegoexito {
+  /* Modifica estos valores según necesites */
+  width: 1000px;
+  height: 800px;
+}
+
+#app > div > div > div > section.tile.tile-turn-carniceria{
+  /* Modifica estos valores según necesites */
+  width: 350px;
+  height: 800px;
+}

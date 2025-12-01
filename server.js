@@ -25,7 +25,8 @@ let sharedState = {
   queue: [],
   current: null,
   lastIssued: 0,
-  prefix: 'C',
+  // prefix: 'C',
+  prefix: '',
   lastAttended: null,
   ts: Date.now()
 }
@@ -158,7 +159,8 @@ io.on('connection', (socket) => {
   // Escuchar acciones del cliente
   socket.on('issueTicket', () => {
     sharedState.lastIssued++
-    const ticket = `${sharedState.prefix}-${String(sharedState.lastIssued).padStart(3, '0')}`
+    const ticketNumber = String(sharedState.lastIssued).padStart(3, '0')
+    const ticket = sharedState.prefix ? `${sharedState.prefix}-${ticketNumber}` : ticketNumber
     sharedState.queue.push(ticket)
     sharedState.ts = Date.now()
     io.emit('state', sharedState) // Emitir a todos los clientes
@@ -195,6 +197,7 @@ io.on('connection', (socket) => {
     io.emit('state', sharedState)
   })
 
+  /*
   socket.on('setPrefix', (prefix) => {
     if (prefix) {
       sharedState.prefix = String(prefix).toUpperCase().slice(0, 2)
@@ -202,6 +205,7 @@ io.on('connection', (socket) => {
       io.emit('state', sharedState)
     }
   })
+  */
 
   socket.on('disconnect', () => {
     console.log('Cliente desconectado:', socket.id)

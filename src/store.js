@@ -9,7 +9,8 @@ const state = reactive({
   queue: [],         // turnos en espera
   current: null,     // en atención
   lastIssued: 0,     // contador
-  prefix: 'C',       // prefijo
+  // prefix: 'C',       // prefijo
+  prefix: '',       // prefijo
   lastAttended: null,// último atendido ✅
   ts: 0,             // marca de tiempo para ordenar estados
 })
@@ -40,6 +41,9 @@ try {
 
 /* Helpers */
 function format(n) {
+  if (state.prefix === '') {
+    return String(n).padStart(3, '0')
+  }
   return `${state.prefix}-${String(n).padStart(3, '0')}`
 }
 
@@ -48,7 +52,7 @@ function toPlain() {
     queue: Array.isArray(state.queue) ? [...state.queue] : [],
     current: state.current ?? null,
     lastIssued: Number(state.lastIssued) || 0,
-    prefix: state.prefix || 'C',
+    prefix: state.prefix || '',
     lastAttended: state.lastAttended ?? null,     // ✅ incluir en payload
     ts: Date.now(),
   }
@@ -62,7 +66,7 @@ function apply(data) {
   state.queue.splice(0, state.queue.length, ...nextQueue)
   state.current      = data.current ?? null
   state.lastIssued   = Number(data.lastIssued || 0)
-  state.prefix       = data.prefix || 'C'
+  state.prefix       = data.prefix || ''
   state.lastAttended = data.lastAttended ?? null  // ✅ aplicar remoto
   state.ts           = data.ts || Date.now()
 }
@@ -96,14 +100,6 @@ function finalizeCurrent() {
 function resetQueue() {
   console.log('Cliente: Emitiendo resetQueue')
   socket.emit('resetQueue')
-  // El estado se actualizará vía socket
-}
-
-/* (Opcional) Cambiar prefijo y sincronizar */
-function setPrefix(p) {
-  if (!p) return
-  console.log('Cliente: Emitiendo setPrefix', p)
-  socket.emit('setPrefix', String(p).toUpperCase().slice(0, 2))
   // El estado se actualizará vía socket
 }
 
@@ -150,4 +146,4 @@ if (channel) {
   }
 }
 
-export default { state, issueTicket, callNext, finalizeCurrent, resetQueue, setPrefix }
+export default { state, issueTicket, callNext, finalizeCurrent, resetQueue }

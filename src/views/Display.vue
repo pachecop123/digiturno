@@ -32,7 +32,7 @@
 
           <footer class="tile-foot-carniceria">
             <span class="live-indicator-carniceria"></span>
-            Siempre Contigo - Actualizado en tiempo real
+            Siempre Contigo
           </footer>
         </section>
 
@@ -161,6 +161,7 @@ function onFsChange() {
   const fs = !!getFullscreenElement()
   isFullscreen.value = fs
   document.body.classList.toggle('hide-navbar', fs)
+  document.body.classList.toggle('fullscreen-mode', fs)
 }
 
 /* ===== Carrusel (Control de Video) ===== */
@@ -486,4 +487,22 @@ onBeforeUnmount(() => {
 <!-- ❗️Regla GLOBAL para ocultar el navbar cuando haya fullscreen -->
 <style>
 .hide-navbar .app-navbar { display: none !important; }
+.fullscreen-mode .display-diegoexito {
+  min-height: 100vh;
+  padding: var(--fullscreen-padding);
+}
+.fullscreen-mode .container-xl {
+  width: 100%;
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+  display: flex;
+  justify-content: var(--fullscreen-justify);
+  align-items: var(--fullscreen-align);
+  min-height: 100vh;
+}
+.fullscreen-mode .display-grid-enhanced {
+  max-width: var(--fullscreen-max-width);
+  width: 100%;
+}
 </style>
