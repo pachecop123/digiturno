@@ -54,9 +54,9 @@
             </div>
           </div>
 
-          <div v-else id="adsCarousel" class="tile-body-ads carousel slide" data-bs-ride="carousel" data-bs-interval="6000">
+          <div v-else id="adsCarousel" class="tile-body-ads carousel slide" data-bs-ride="false">
             <div class="carousel-inner" ref="carouselInner">
-              <div v-for="(ad, index) in ads" :key="ad.path" class="carousel-item" :class="{ active: index === 0 }">
+              <div v-for="(ad, index) in ads" :key="`ad-${index}-${ad.name}`" class="carousel-item" :class="{ active: index === 0 }">
                 <img v-if="ad.type === 'image'" :src="ad.path" class="ads-media" :alt="ad.name" loading="lazy" />
                 <video v-else-if="ad.type === 'video'" :ref="`video-${index}`" class="ads-media" muted loop playsinline>
                   <source :src="ad.path" type="video/mp4">
@@ -228,6 +228,35 @@ function handleCarouselSlide() {
 
 /* Auto-actualización de anuncios cada 5 minutos */
 let adsRefreshInterval = null
+let carouselInstance = null
+
+function initCarousel() {
+  const carouselEl = document.getElementById('adsCarousel')
+  if (!carouselEl) return
+
+  // Destruir instancia anterior si existe
+  if (carouselInstance) {
+    try {
+      carouselInstance.dispose()
+    } catch (e) {}
+  }
+
+  // Importar Bootstrap Carousel dinámicamente
+  import('bootstrap/dist/js/bootstrap.bundle.min.js').then((bootstrap) => {
+    carouselInstance = new bootstrap.Carousel(carouselEl, {
+      interval: 6000,
+      ride: 'carousel',
+      pause: false,
+      wrap: true
+    })
+
+    // Configurar evento de slide
+    carouselEl.addEventListener('slide.bs.carousel', handleCarouselSlide)
+
+    // Iniciar videos si es el primer slide
+    handleCarouselSlide()
+  })
+}
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', onFsChange)
@@ -236,22 +265,17 @@ onMounted(() => {
   document.addEventListener('MSFullscreenChange', onFsChange)
 
   loadAds().then(() => {
-    // Configurar evento del carrusel después de cargar los anuncios
+    // Esperar a que Vue renderice el DOM
     setTimeout(() => {
-      const carousel = document.getElementById('adsCarousel')
-      if (carousel) {
-        carousel.addEventListener('slide.bs.carousel', handleCarouselSlide)
-        // Reproducir el primer video si existe
-        handleCarouselSlide()
-      }
-    }, 100)
+      initCarousel()
+    }, 150)
   })
 
   // Auto-actualizar anuncios cada 5 minutos
   adsRefreshInterval = setInterval(() => {
     loadAds().then(() => {
       setTimeout(() => {
-        handleCarouselSlide()
+        initCarousel()
       }, 200)
     })
   }, 5 * 60 * 1000)
@@ -266,6 +290,13 @@ onBeforeUnmount(() => {
   const carousel = document.getElementById('adsCarousel')
   if (carousel) {
     carousel.removeEventListener('slide.bs.carousel', handleCarouselSlide)
+  }
+
+  // Destruir instancia de carousel
+  if (carouselInstance) {
+    try {
+      carouselInstance.dispose()
+    } catch (e) {}
   }
 
   // Limpiar intervalo de actualización
@@ -416,7 +447,9 @@ onBeforeUnmount(() => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Estado de carga */
@@ -427,36 +460,46 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   color: #6c757d;
 }
 
 /* Carrusel ocupa todo el espacio */
 .tile-body-ads.carousel {
-  display: block;
   width: 100%;
   height: 100%;
+  flex: 1;
 }
 
 .tile-body-ads .carousel-inner {
   width: 100%;
   height: 100%;
+  position: relative;
 }
 
 .tile-body-ads .carousel-item {
   width: 100%;
   height: 100%;
-  transition: transform 0.6s ease-in-out;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Imágenes y videos ocupan todo */
+/* Bootstrap ya maneja position y transitions, solo agregamos flex */
+.tile-body-ads .carousel-item.active,
+.tile-body-ads .carousel-item-next,
+.tile-body-ads .carousel-item-prev {
+  display: flex !important;
+}
+
+/* Imágenes y videos se ajustan al contenedor */
 .tile-body-ads .ads-media {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   object-position: center;
   display: block;
-  background: #000;
   /* Optimización de renderizado */
   transform: translateZ(0);
   backface-visibility: hidden;
