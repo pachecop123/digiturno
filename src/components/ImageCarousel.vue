@@ -12,14 +12,13 @@
       </div>
     </transition>
 
-    <!-- Indicadores -->
+    <!-- Indicadores (máximo 3 puntos) -->
     <div v-if="images.length > 1" class="carousel-indicators">
       <button
-        v-for="(image, index) in images"
-        :key="index"
-        :class="{ active: index === currentImageIndex }"
-        @click="goToSlide(index)"
-        :aria-label="`Ir a imagen ${index + 1}`"
+        v-for="dot in 3"
+        :key="dot"
+        :class="{ active: isActiveDot(dot - 1) }"
+        :aria-label="`Posición ${dot}`"
       ></button>
     </div>
   </div>
@@ -89,6 +88,29 @@ function goToSlide(index) {
     resetInterval()
   }
 }
+
+// Determinar cuál de los 3 puntos debe estar activo
+function isActiveDot(dotIndex) {
+  const totalImages = props.images.length
+  const currentIndex = currentImageIndex.value
+
+  if (totalImages <= 3) {
+    // Si hay 3 o menos imágenes, mapear directamente
+    return dotIndex === currentIndex
+  }
+
+  // Para más de 3 imágenes, distribuir en 3 secciones
+  const sectionSize = totalImages / 3
+  const currentSection = Math.floor(currentIndex / sectionSize)
+
+  // El último punto representa todo lo que está más allá de la sección 2
+  if (dotIndex === 2 && currentSection >= 2) {
+    return true
+  }
+
+  return dotIndex === currentSection
+}
+
 
 function startInterval() {
   if (props.images.length <= 1) return
@@ -187,34 +209,34 @@ onBeforeUnmount(() => {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 10px;
+  gap: 12px;
   z-index: 10;
-  padding: 10px 15px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 20px;
-  backdrop-filter: blur(5px);
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 25px;
+  backdrop-filter: blur(8px);
+  justify-content: center;
+  align-items: center;
+  margin-left: 10px;
 }
 
 .carousel-indicators button {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.3);
-  cursor: pointer;
-  transition: all 0.3s ease;
+  cursor: default;
+  transition: all 0.4s ease;
   padding: 0;
-}
-
-.carousel-indicators button:hover {
-  background: rgba(255, 255, 255, 0.6);
-  transform: scale(1.2);
+  pointer-events: none;
 }
 
 .carousel-indicators button.active {
   background: #C41E3A;
   border-color: #C41E3A;
-  box-shadow: 0 0 10px rgba(196, 30, 58, 0.5);
+  box-shadow: 0 0 12px rgba(196, 30, 58, 0.6);
+  transform: scale(1.3);
 }
 
 /* Transición Fade */
@@ -266,14 +288,14 @@ onBeforeUnmount(() => {
 /* Responsive */
 @media (max-width: 768px) {
   .carousel-indicators {
-    bottom: 10px;
-    padding: 8px 12px;
-    gap: 8px;
+    bottom: 15px;
+    padding: 8px 16px;
+    gap: 10px;
   }
 
   .carousel-indicators button {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
   }
 }
 </style>
