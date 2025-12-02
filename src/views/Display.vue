@@ -58,27 +58,18 @@
           <div v-if="currentAd && currentAd.type === 'video'" class="tile-body-ads video-mode">
             <VideoPlayer
               :video-src="currentAd.path"
-              @ended="handleAdFinished"
-              @error="handleAdFinished"
+              @ended="handleVideoFinished"
+              @error="handleVideoFinished"
             />
           </div>
 
           <!-- Carrusel de imágenes cuando no hay video activo -->
-          <div v-else-if="imageAds.length > 0" id="adsCarousel" ref="carouselElRef" class="tile-body-ads carousel slide">
-            <div class="carousel-inner">
-              <div v-for="(ad, index) in imageAds" :key="ad.name" class="carousel-item" :class="{ active: index === 0 }">
-                <img :src="ad.path" class="ads-media" :alt="ad.name" loading="lazy" />
-              </div>
-            </div>
-
-            <button v-if="imageAds.length > 1" class="carousel-control-prev carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="prev">
-              <span class="carousel-control-prev-icon control-icon-diegoexito" aria-hidden="true"></span>
-              <span class="visually-hidden">Anterior</span>
-            </button>
-            <button v-if="imageAds.length > 1" class="carousel-control-next carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="next">
-              <span class="carousel-control-next-icon control-icon-diegoexito" aria-hidden="true"></span>
-              <span class="visually-hidden">Siguiente</span>
-            </button>
+          <div v-else-if="showingImages && imageAds.length > 0" class="tile-body-ads image-mode">
+            <ImageCarousel
+              :images="imageAds"
+              :interval="5000"
+              @cycle-complete="handleImageCycleComplete"
+            />
           </div>
 
           <footer class="tile-foot-carniceria">
@@ -92,9 +83,9 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { Carousel } from 'bootstrap'
 import store from '../store'
 import VideoPlayer from '../components/VideoPlayer.vue'
+import ImageCarousel from '../components/ImageCarousel.vue'
 
 /* Derivados del store */
 const current      = computed(() => store.state?.current ?? null)
@@ -104,8 +95,8 @@ const queue        = computed(() => Array.isArray(store.state?.queue) ? store.st
 
 /* ===== Publicidades ===== */
 const ads = ref([])
-const currentAd = ref(null)
-const currentAdIndex = ref(0)
+const currentAd = ref(null) // Video actual que se está mostrando
+const showingImages = ref(false) // Estado para mostrar el carrusel de imágenes
 
 // Separar imágenes de videos
 const imageAds = computed(() => ads.value.filter(ad => ad.type === 'image'))
@@ -181,107 +172,80 @@ function onFsChange() {
 }
 
 /* ===== Sistema de Rotación de Publicidades ===== */
-const carouselElRef = ref(null)
-let carouselInstance = null
-let rotationTimer = null
 let videoRotationIndex = ref(0)
 
-// Mostrar el siguiente anuncio de video
+// Mostrar el siguiente video
 function showNextVideo() {
   if (videoAds.value.length === 0) {
-    console.log('No hay videos, volver al carrusel de imágenes')
+    console.log('No hay videos disponibles')
+    showingImages.value = true
     currentAd.value = null
     return
   }
 
-  console.log('Mostrando video', videoRotationIndex.value + 1, 'de', videoAds.value.length)
+  showingImages.value = false
   currentAd.value = videoAds.value[videoRotationIndex.value]
+  console.log(`Mostrando video ${videoRotationIndex.value + 1} de ${videoAds.value.length}:`, currentAd.value.name)
 
-  // Avanzar el índice para el próximo video
+  // Avanzar al siguiente video para la próxima vez
   videoRotationIndex.value = (videoRotationIndex.value + 1) % videoAds.value.length
 }
 
-// Cuando un anuncio (imagen o video) termina
-function handleAdFinished() {
-  console.log('Anuncio terminado, rotando...')
+// Cuando un video termina
+function handleVideoFinished() {
+  console.log('✓ Video terminado')
 
-  // Si era un video, pasar al carrusel de imágenes
-  if (currentAd.value && currentAd.value.type === 'video') {
-    console.log('Video terminado, pasando a carrusel de imágenes')
+  // Si hay imágenes, mostrarlas
+  if (imageAds.value.length > 0) {
+    console.log('Mostrando carrusel de imágenes')
+    showingImages.value = true
     currentAd.value = null
-
-    // Después de mostrar imágenes por un ciclo, volver a videos
-    if (videoAds.value.length > 0) {
-      // Tiempo para mostrar el carrusel de imágenes (5 segundos por imagen)
-      const imageDisplayTime = imageAds.value.length > 0 ? imageAds.value.length * 5000 : 5000
-      console.log('Mostrando carrusel de imágenes por', imageDisplayTime / 1000, 'segundos')
-
-      rotationTimer = setTimeout(() => {
-        showNextVideo()
-      }, imageDisplayTime)
-    }
+  } else {
+    // Si no hay imágenes, pasar al siguiente video
+    console.log('No hay imágenes, pasando al siguiente video')
+    showNextVideo()
   }
 }
 
-// Inicializar el carrusel de imágenes
-function initImageCarousel() {
-  if (imageAds.value.length === 0) return
+// Cuando el ciclo de imágenes se completa
+function handleImageCycleComplete() {
+  console.log('✓ Ciclo de imágenes completado')
 
-  nextTick(() => {
-    const carouselEl = carouselElRef.value
-    if (!carouselEl) return
-
-    console.log('Inicializando carrusel de imágenes...')
-
-    // Si ya existe una instancia, destruirla primero
-    if (carouselInstance) {
-      carouselInstance.dispose()
-    }
-
-    // Crear nueva instancia del carrusel con cycling automático
-    carouselInstance = new Carousel(carouselEl, {
-      interval: 5000,
-      ride: 'carousel',
-      wrap: true,
-      pause: false
-    })
-
-    console.log('Carrusel de imágenes inicializado')
-  })
+  // Si hay videos, mostrar el siguiente
+  if (videoAds.value.length > 0) {
+    console.log('Pasando al siguiente video')
+    showNextVideo()
+  }
+  // Si no hay videos, el carrusel seguirá rotando automáticamente
 }
 
 // Iniciar el sistema de rotación
 function startRotation() {
   console.log('=== Iniciando sistema de rotación de publicidades ===')
-  console.log('Total ads:', ads.value.length)
-  console.log('Imágenes:', imageAds.value.length)
-  console.log('Videos:', videoAds.value.length)
+  console.log('Total:', ads.value.length, '| Imágenes:', imageAds.value.length, '| Videos:', videoAds.value.length)
 
-  // Si hay videos, comenzar con el primer video
+  videoRotationIndex.value = 0
+
   if (videoAds.value.length > 0) {
+    // Si hay videos, comenzar con el primer video
     console.log('Comenzando con primer video')
-    videoRotationIndex.value = 0
     showNextVideo()
   } else if (imageAds.value.length > 0) {
     // Si solo hay imágenes, mostrar el carrusel
     console.log('Solo hay imágenes, mostrando carrusel')
+    showingImages.value = true
     currentAd.value = null
-    initImageCarousel()
+  } else {
+    console.log('No hay publicidades para mostrar')
   }
 }
 
 // Detener la rotación
 function stopRotation() {
   console.log('Deteniendo rotación de publicidades')
-  if (rotationTimer) {
-    clearTimeout(rotationTimer)
-    rotationTimer = null
-  }
-  if (carouselInstance) {
-    carouselInstance.dispose()
-    carouselInstance = null
-  }
+  showingImages.value = false
   currentAd.value = null
+  videoRotationIndex.value = 0
 }
 
 /* Auto-actualización de anuncios */
@@ -310,14 +274,6 @@ onMounted(() => {
       })
     })
   }, 5 * 60 * 1000)
-})
-
-// Watch para reinicializar el carrusel cuando currentAd cambia a null (muestra imágenes)
-watch(currentAd, (newVal) => {
-  if (newVal === null && imageAds.value.length > 0) {
-    console.log('Mostrando carrusel de imágenes')
-    initImageCarousel()
-  }
 })
 
 onBeforeUnmount(() => {
@@ -486,6 +442,11 @@ onBeforeUnmount(() => {
   background: #000;
 }
 
+/* Modo imagen - mantener gradiente */
+.tile-body-ads.image-mode {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
 /* Estado de carga */
 .tile-body-ads .ads-loading {
   width: 100%;
@@ -496,72 +457,6 @@ onBeforeUnmount(() => {
   justify-content: center;
   color: #6c757d;
 }
-
-/* Carrusel ocupa todo el espacio */
-.tile-body-ads.carousel {
-  width: 100%;
-  height: 100%;
-  flex: 1;
-}
-
-.tile-body-ads .carousel-inner {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.tile-body-ads .carousel-item {
-  width: 100%;
-  height: 100%;
-  /* display: flex !important; */ /* <- ESTO ROMPE EL CARRUSEL */
-  align-items: center;
-  justify-content: center;
-}
-
-/* Bootstrap ya maneja position y transitions, solo agregamos flex */
-.tile-body-ads .carousel-item.active,
-.tile-body-ads .carousel-item-next,
-.tile-body-ads .carousel-item-prev {
-  /* display: flex !important; */ /* <- ESTO ROMPE EL CARRUSEL */
-}
-
-/* Imágenes y videos se ajustan al contenedor */
-.tile-body-ads .ads-media {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  object-position: center;
-  display: block;
-  /* Optimización de renderizado */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-.ads-item { height: 100%; display: grid; place-items: center; padding: 2rem; }
-.offer-slide { text-align: center; width: 100%; color: var(--diego-red); }
-.logo-container { margin-bottom: 2rem; }
-.logo-circle {
-  width: 120px; height: 120px; margin: 0 auto; border-radius: 50%;
-  background: radial-gradient(circle, var(--diego-red) 0%, var(--diego-red-dark) 100%);
-  display: grid; place-items: center; box-shadow: 0 8px 25px rgba(196,30,58,.35);
-}
-.logo-content { color: #fff; font-size: 2rem; display: grid; gap: .5rem; place-items: center; }
-.offer-title { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 900; color: var(--diego-red); margin-bottom: 1rem; text-shadow: 0 2px 4px rgba(196,30,58,.18); }
-.offer-subtitle { font-size: 1.1rem; color: var(--diego-blue); font-weight: 600; margin-bottom: 1.6rem; }
-.offer-badge {
-  background: linear-gradient(135deg, var(--diego-blue) 0%, var(--diego-blue-dark) 100%);
-  color: #fff; padding: .65rem 1.3rem; border-radius: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
-  display: inline-block; box-shadow: 0 4px 15px rgba(30,64,175,.28);
-}
-
-/* Controles carrusel */
-.carousel-control-diegoexito { width: 60px; opacity: 0; transition: opacity .25s ease; }
-.ads-stage-diegoexito:hover .carousel-control-diegoexito { opacity: .85; }
-.carousel-control-diegoexito:hover { opacity: 1 !important; }
-.control-icon-diegoexito { width: 40px; height: 40px; background: var(--diego-red) !important; border-radius: 50%;
-  box-shadow: 0 4px 15px rgba(196,30,58,.35); transition: transform .2s ease, background .2s ease; }
-.carousel-control-diegoexito:hover .control-icon-diegoexito { background: var(--diego-red-dark) !important; transform: scale(1.06); }
 
 /* Animación del turno */
 .animate-number { animation: popCarniceria .6s cubic-bezier(.68,-.55,.265,1.55); }
