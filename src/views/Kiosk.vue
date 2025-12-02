@@ -240,7 +240,7 @@ function downloadTicketPdf() {
 }
 
 /* ====================================
-   Generar ticket (descarga PDF "de una")
+   Generar ticket (imprime automáticamente)
    ==================================== */
 async function takeTicket() {
   if (loading.value) return
@@ -250,17 +250,23 @@ async function takeTicket() {
     ticket.value = t
     if (soundOn.value) beep()
 
-    // Sella fecha/hora para el PDF y (si usas) la boleta de impresión
+    // Sella fecha/hora para la boleta de impresión
     const now = new Date()
     printedAt.value = now.toLocaleString('es-CO', {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
     })
 
-    // Descarga automática del PDF en el mismo gesto
-    downloadTicketPdf()
+    // Esperar a que Vue actualice el DOM con los datos del ticket
+    await nextTick()
 
-    // Aviso corto (no bloquea la descarga)
+    // Imprimir automáticamente sin diálogo
+    // Usar setTimeout para asegurar que el DOM está actualizado
+    setTimeout(() => {
+      window.print()
+    }, 100)
+
+    // Aviso corto (no bloquea la impresión)
     setTimeout(() => {
       Swal.fire({
         title: 'Turno generado',
