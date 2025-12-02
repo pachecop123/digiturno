@@ -54,11 +54,11 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
   fileFilter: function (req, file, cb) {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'video/mp4']
-    if (allowedTypes.includes(file.mimetype)) {
+    // Aceptar todos los tipos de imagen y video
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
       cb(null, true)
     } else {
-      cb(new Error('Tipo de archivo no permitido. Solo JPG, PNG y MP4'))
+      cb(new Error('Tipo de archivo no permitido. Solo se aceptan imágenes y videos'))
     }
   }
 })
@@ -77,17 +77,22 @@ app.get('/api/ads', async (req, res) => {
     }
 
     const files = await readdir(adsDir)
+
+    // Extensiones comunes de imagen y video
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif']
+    const videoExts = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'mkv', 'webm', 'mpeg', 'mpg', 'm4v', '3gp']
+
     const ads = files
       .filter(file => {
         const ext = file.toLowerCase().split('.').pop()
-        return ['jpg', 'jpeg', 'png', 'mp4'].includes(ext)
+        return imageExts.includes(ext) || videoExts.includes(ext)
       })
       .map(file => {
         const ext = file.toLowerCase().split('.').pop()
         return {
           name: file,
           path: `/ads/${file}`,
-          type: ext === 'mp4' ? 'video' : 'image'
+          type: videoExts.includes(ext) ? 'video' : 'image'
         }
       })
 

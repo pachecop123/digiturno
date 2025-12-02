@@ -54,21 +54,28 @@
             </div>
           </div>
 
-          <div v-else id="adsCarousel" ref="carouselElRef" class="tile-body-ads carousel slide" data-bs-ride="carousel" data-bs-interval="5000" data-bs-wrap="true">
+          <!-- Reproductor de video cuando hay un video activo -->
+          <div v-if="currentAd && currentAd.type === 'video'" class="tile-body-ads video-mode">
+            <VideoPlayer
+              :video-src="currentAd.path"
+              @ended="handleAdFinished"
+              @error="handleAdFinished"
+            />
+          </div>
+
+          <!-- Carrusel de imágenes cuando no hay video activo -->
+          <div v-else-if="imageAds.length > 0" id="adsCarousel" ref="carouselElRef" class="tile-body-ads carousel slide">
             <div class="carousel-inner">
-              <div v-for="(ad, index) in ads" :key="ad.name" class="carousel-item" :class="{ active: index === 0 }">
-                <img v-if="ad.type === 'image'" :src="ad.path" class="ads-media" :alt="ad.name" loading="lazy" />
-                <video v-else-if="ad.type === 'video'" :ref="`video-${index}`" class="ads-media" muted loop playsinline>
-                  <source :src="ad.path" type="video/mp4">
-                </video>
+              <div v-for="(ad, index) in imageAds" :key="ad.name" class="carousel-item" :class="{ active: index === 0 }">
+                <img :src="ad.path" class="ads-media" :alt="ad.name" loading="lazy" />
               </div>
             </div>
 
-            <button v-if="ads.length > 1" class="carousel-control-prev carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="prev">
+            <button v-if="imageAds.length > 1" class="carousel-control-prev carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="prev">
               <span class="carousel-control-prev-icon control-icon-diegoexito" aria-hidden="true"></span>
               <span class="visually-hidden">Anterior</span>
             </button>
-            <button v-if="ads.length > 1" class="carousel-control-next carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="next">
+            <button v-if="imageAds.length > 1" class="carousel-control-next carousel-control-diegoexito" type="button" data-bs-target="#adsCarousel" data-bs-slide="next">
               <span class="carousel-control-next-icon control-icon-diegoexito" aria-hidden="true"></span>
               <span class="visually-hidden">Siguiente</span>
             </button>
@@ -85,7 +92,9 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { Carousel } from 'bootstrap'
 import store from '../store'
+import VideoPlayer from '../components/VideoPlayer.vue'
 
 /* Derivados del store */
 const current      = computed(() => store.state?.current ?? null)
@@ -93,8 +102,14 @@ const lastAttended = computed(() => store.state?.lastAttended ?? null)
 const prefix       = computed(() => store.state?.prefix || 'C')
 const queue        = computed(() => Array.isArray(store.state?.queue) ? store.state.queue : [])
 
-/* Publicidades */
+/* ===== Publicidades ===== */
 const ads = ref([])
+const currentAd = ref(null)
+const currentAdIndex = ref(0)
+
+// Separar imágenes de videos
+const imageAds = computed(() => ads.value.filter(ad => ad.type === 'image'))
+const videoAds = computed(() => ads.value.filter(ad => ad.type === 'video'))
 
 async function loadAds() {
   try {
@@ -103,6 +118,7 @@ async function loadAds() {
     })
     const data = await response.json()
     ads.value = data.filter(ad => ad.name !== 'logo.png')
+    console.log('Publicidades cargadas:', ads.value.length, '- Imágenes:', imageAds.value.length, 'Videos:', videoAds.value.length)
   } catch (error) {
     console.error('Error cargando publicidades:', error)
     // Fallback a publicidades por defecto
@@ -164,35 +180,108 @@ function onFsChange() {
   document.body.classList.toggle('fullscreen-mode', fs)
 }
 
-/* ===== Carrusel (Control de Video) ===== */
+/* ===== Sistema de Rotación de Publicidades ===== */
 const carouselElRef = ref(null)
+let carouselInstance = null
+let rotationTimer = null
+let videoRotationIndex = ref(0)
 
-// Esta función se dispara cuando el carrusel empieza a cambiar de slide
-function handleCarouselSlide(event) {
-  // El evento es `null` en la llamada inicial
-  const activeIndex = event ? event.to : 0
-  
-  const carouselEl = carouselElRef.value
-  if (!carouselEl) return
-  
-  const carouselItems = carouselEl.querySelectorAll('.carousel-item')
-  if (!carouselItems.length) return
-
-  // Pausar todos los videos
-  carouselEl.querySelectorAll('video').forEach(video => {
-    video.pause()
-  })
-  
-  // Reproducir el video del slide que va a quedar activo
-  const activeItem = carouselItems[activeIndex]
-  const videoToPlay = activeItem?.querySelector('video')
-  
-  if (videoToPlay) {
-    videoToPlay.currentTime = 0
-    videoToPlay.play().catch(() => {
-      // Silenciar errores de autoplay
-    })
+// Mostrar el siguiente anuncio de video
+function showNextVideo() {
+  if (videoAds.value.length === 0) {
+    console.log('No hay videos, volver al carrusel de imágenes')
+    currentAd.value = null
+    return
   }
+
+  console.log('Mostrando video', videoRotationIndex.value + 1, 'de', videoAds.value.length)
+  currentAd.value = videoAds.value[videoRotationIndex.value]
+
+  // Avanzar el índice para el próximo video
+  videoRotationIndex.value = (videoRotationIndex.value + 1) % videoAds.value.length
+}
+
+// Cuando un anuncio (imagen o video) termina
+function handleAdFinished() {
+  console.log('Anuncio terminado, rotando...')
+
+  // Si era un video, pasar al carrusel de imágenes
+  if (currentAd.value && currentAd.value.type === 'video') {
+    console.log('Video terminado, pasando a carrusel de imágenes')
+    currentAd.value = null
+
+    // Después de mostrar imágenes por un ciclo, volver a videos
+    if (videoAds.value.length > 0) {
+      // Tiempo para mostrar el carrusel de imágenes (5 segundos por imagen)
+      const imageDisplayTime = imageAds.value.length > 0 ? imageAds.value.length * 5000 : 5000
+      console.log('Mostrando carrusel de imágenes por', imageDisplayTime / 1000, 'segundos')
+
+      rotationTimer = setTimeout(() => {
+        showNextVideo()
+      }, imageDisplayTime)
+    }
+  }
+}
+
+// Inicializar el carrusel de imágenes
+function initImageCarousel() {
+  if (imageAds.value.length === 0) return
+
+  nextTick(() => {
+    const carouselEl = carouselElRef.value
+    if (!carouselEl) return
+
+    console.log('Inicializando carrusel de imágenes...')
+
+    // Si ya existe una instancia, destruirla primero
+    if (carouselInstance) {
+      carouselInstance.dispose()
+    }
+
+    // Crear nueva instancia del carrusel con cycling automático
+    carouselInstance = new Carousel(carouselEl, {
+      interval: 5000,
+      ride: 'carousel',
+      wrap: true,
+      pause: false
+    })
+
+    console.log('Carrusel de imágenes inicializado')
+  })
+}
+
+// Iniciar el sistema de rotación
+function startRotation() {
+  console.log('=== Iniciando sistema de rotación de publicidades ===')
+  console.log('Total ads:', ads.value.length)
+  console.log('Imágenes:', imageAds.value.length)
+  console.log('Videos:', videoAds.value.length)
+
+  // Si hay videos, comenzar con el primer video
+  if (videoAds.value.length > 0) {
+    console.log('Comenzando con primer video')
+    videoRotationIndex.value = 0
+    showNextVideo()
+  } else if (imageAds.value.length > 0) {
+    // Si solo hay imágenes, mostrar el carrusel
+    console.log('Solo hay imágenes, mostrando carrusel')
+    currentAd.value = null
+    initImageCarousel()
+  }
+}
+
+// Detener la rotación
+function stopRotation() {
+  console.log('Deteniendo rotación de publicidades')
+  if (rotationTimer) {
+    clearTimeout(rotationTimer)
+    rotationTimer = null
+  }
+  if (carouselInstance) {
+    carouselInstance.dispose()
+    carouselInstance = null
+  }
+  currentAd.value = null
 }
 
 /* Auto-actualización de anuncios */
@@ -204,24 +293,31 @@ onMounted(() => {
   document.addEventListener('mozfullscreenchange', onFsChange)
   document.addEventListener('MSFullscreenChange', onFsChange)
 
-  // Añadir el listener para controlar los videos
-  const carouselEl = carouselElRef.value
-  if (carouselEl) {
-    carouselEl.addEventListener('slide.bs.carousel', handleCarouselSlide)
-  }
-
+  // Cargar publicidades e iniciar rotación
   loadAds().then(() => {
-    // Cuando los anuncios cargan, el DOM se actualiza
-    // Esperamos un tick para asegurarnos de que el DOM esté listo
     nextTick(() => {
-      // Revisar si el primer slide (que está activo por defecto) tiene un video para reproducirlo
-      handleCarouselSlide(null)
+      startRotation()
     })
   })
 
+  // Refrescar publicidades cada 5 minutos
   adsRefreshInterval = setInterval(() => {
-    loadAds()
+    loadAds().then(() => {
+      // Reiniciar rotación con las nuevas publicidades
+      stopRotation()
+      nextTick(() => {
+        startRotation()
+      })
+    })
   }, 5 * 60 * 1000)
+})
+
+// Watch para reinicializar el carrusel cuando currentAd cambia a null (muestra imágenes)
+watch(currentAd, (newVal) => {
+  if (newVal === null && imageAds.value.length > 0) {
+    console.log('Mostrando carrusel de imágenes')
+    initImageCarousel()
+  }
 })
 
 onBeforeUnmount(() => {
@@ -230,11 +326,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('mozfullscreenchange', onFsChange)
   document.removeEventListener('MSFullscreenChange', onFsChange)
 
-  // Limpiar el listener del carrusel
-  const carouselEl = carouselElRef.value
-  if (carouselEl) {
-    carouselEl.removeEventListener('slide.bs.carousel', handleCarouselSlide)
-  }
+  // Detener rotación de publicidades
+  stopRotation()
 
   if (adsRefreshInterval) {
     clearInterval(adsRefreshInterval)
@@ -386,6 +479,11 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   display: flex;
   flex-direction: column;
+}
+
+/* Modo video - fondo negro */
+.tile-body-ads.video-mode {
+  background: #000;
 }
 
 /* Estado de carga */

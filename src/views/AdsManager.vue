@@ -22,7 +22,7 @@
               </router-link>
               <label class="btn btn-success btn-sm mb-0">
                 <i class="bi bi-upload me-1"></i> Cargar nueva
-                <input type="file" ref="fileInput" @change="uploadAd" accept="image/*,video/mp4" style="display: none;">
+                <input type="file" ref="fileInput" @change="uploadAd" accept="image/*,video/*" style="display: none;">
               </label>
             </div>
           </div>
@@ -129,7 +129,7 @@
             <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
               <div class="text-muted small">
                 <i class="bi bi-info-circle me-1"></i>
-                Formatos: JPG, PNG, MP4 (máx. 50MB)
+                Acepta todos los formatos de imagen y video (máx. 50MB)
               </div>
               <div class="text-muted small">
                 <i class="bi bi-shield-fill me-1"></i>
