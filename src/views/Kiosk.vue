@@ -33,9 +33,6 @@
                 <div>
                   <div class="text-muted small">Último emitido</div>
                   <div class="fs-3 fw-bold">{{ lastIssued }}</div>
-                  <small class="text-muted">Prefijo:
-                    <span class="badge bg-secondary">{{ prefix }}</span>
-                  </small>
                 </div>
               </div>
             </div>
@@ -127,10 +124,6 @@
           <span>{{ printedAt }}</span>
         </div>
         <div class="tp-row">
-          <span>Prefijo</span>
-          <span>{{ prefix }}</span>
-        </div>
-        <div class="tp-row">
           <span>En cola</span>
           <span>{{ queueLength }}</span>
         </div>
@@ -220,7 +213,6 @@ function downloadTicketPdf() {
   // Info
   const rows = [
     ['Fecha', printedAt.value || '—'],
-    ['Prefijo', String(prefix.value)],
     ['En cola', String(queueLength.value)]
   ]
   doc.setFont('courier', 'bold'); doc.setFontSize(11)
