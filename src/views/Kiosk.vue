@@ -80,12 +80,12 @@
                 <span class="badge bg-success fs-3 align-middle">{{ ticket }}</span>
               </h3>
               <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-outline-secondary" @click="copyTicket">
+                <!-- <button class="btn btn-outline-secondary" @click="copyTicket">
                   <i class="bi bi-clipboard-check me-1"></i> Copiar
                 </button>
                 <button class="btn btn-outline-success" @click="shareWhatsApp">
                   <i class="bi bi-whatsapp me-1"></i> WhatsApp
-                </button>
+                </button> -->
                 <button class="btn btn-outline-dark" @click="printTicket">
                   <i class="bi bi-printer me-1"></i> Imprimir
                 </button>
