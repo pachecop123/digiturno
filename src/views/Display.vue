@@ -10,7 +10,21 @@
       <i :class="isFullscreen ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen'"></i>
     </button>
 
-    <div class="container-xl py-4">
+    <div class="container-xxl display-container">
+      <!-- Banner de Fecha y Hora -->
+      <section class="datetime-banner">
+        <div class="datetime-banner-content">
+          <div class="date-section">
+            <i class="bi bi-calendar3"></i>
+            <span>{{ currentDate }}</span>
+          </div>
+          <div class="time-section">
+            <i class="bi bi-clock"></i>
+            <span>{{ currentTime }}</span>
+          </div>
+        </div>
+      </section>
+
       <div class="display-grid-enhanced">
         <!-- Turno -->
         <section class="tile tile-turn-carniceria">
@@ -92,6 +106,30 @@ const current      = computed(() => store.state?.current ?? null)
 const lastAttended = computed(() => store.state?.lastAttended ?? null)
 const prefix       = computed(() => store.state?.prefix || 'C')
 const queue        = computed(() => Array.isArray(store.state?.queue) ? store.state.queue : [])
+
+/* ===== Fecha y hora en tiempo real ===== */
+const currentDate = ref('')
+const currentTime = ref('')
+let clockInterval = null
+
+function updateClock() {
+  const now = new Date()
+
+  // Formato de fecha: "Lunes, 9 de Diciembre de 2025"
+  currentDate.value = now.toLocaleDateString('es-CO', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+
+  // Formato de hora: "14:30:45"
+  currentTime.value = now.toLocaleTimeString('es-CO', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
 
 /* ===== Publicidades ===== */
 const ads = ref([])
@@ -307,6 +345,10 @@ onMounted(() => {
   document.addEventListener('mozfullscreenchange', onFsChange)
   document.addEventListener('MSFullscreenChange', onFsChange)
 
+  // Iniciar reloj
+  updateClock()
+  clockInterval = setInterval(updateClock, 1000)
+
   // Cargar publicidades e iniciar rotación
   loadAds().then(() => {
     nextTick(() => {
@@ -331,6 +373,11 @@ onBeforeUnmount(() => {
   document.removeEventListener('webkitfullscreenchange', onFsChange)
   document.removeEventListener('mozfullscreenchange', onFsChange)
   document.removeEventListener('MSFullscreenChange', onFsChange)
+
+  // Detener reloj
+  if (clockInterval) {
+    clearInterval(clockInterval)
+  }
 
   // Detener rotación de publicidades
   stopRotation()
@@ -376,6 +423,9 @@ onBeforeUnmount(() => {
   min-height: 100dvh;
   color: var(--diego-white);
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .display-diegoexito::before {
@@ -386,18 +436,37 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(0.5px);
 }
 
-.container-xl { position: relative; z-index: 1; }
+.display-container {
+  position: relative;
+  z-index: 1;
+  padding: 2rem 1rem;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .display-container {
+    padding: 3rem 2rem;
+  }
+}
 
 .display-grid-enhanced {
   display: grid;
   gap: 2rem;
   grid-template-columns: 1fr;
   grid-auto-rows: minmax(var(--panel-h), auto);
+  max-width: 1800px;
+  margin: 0 auto;
 }
 @media (min-width: 768px) {
   .display-grid-enhanced {
     grid-template-columns: 1fr 2fr;
     align-items: stretch;
+  }
+}
+@media (min-width: 1400px) {
+  .display-grid-enhanced {
+    grid-template-columns: 1fr 2.5fr;
+    gap: 3rem;
   }
 }
 
@@ -465,6 +534,114 @@ onBeforeUnmount(() => {
   text-shadow: 0 2px 4px rgba(30, 64, 175, .18);
 }
 
+/* Banner de Fecha y Hora */
+.datetime-banner {
+  /* ========================================
+     AJUSTES PERSONALIZABLES DEL BANNER
+     Cambia estos valores a tu gusto:
+     ======================================== */
+  --banner-max-width: 100%;           /* Ancho máximo (ej: 1200px, 1400px, 100%) */
+  --banner-margin-bottom: 2rem;       /* Espacio debajo del banner */
+  --banner-border-radius: 20px;       /* Redondeo de esquinas */
+  --banner-padding-vertical: 1.25rem; /* ALTURA interna (arriba/abajo) */
+  --banner-padding-horizontal: 5rem;  /* ANCHO interno (izquierda/derecha) */
+  --banner-gap: 2rem;                 /* Espacio entre fecha y hora */
+
+  /* Tamaños de texto */
+  --fecha-texto-size: 1.35rem;        /* Tamaño texto de la fecha */
+  --hora-texto-size: 2.5rem;          /* Tamaño texto de la hora */
+  --icono-size: 1.75rem;              /* Tamaño de los iconos */
+  --icon-text-gap: 0.75rem;           /* Espacio entre icono y texto */
+  /* ======================================== */
+
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border: 2px solid rgba(196, 30, 58, 0.28);
+  border-radius: var(--banner-border-radius);
+  box-shadow: 10 8px 32px rgba(196, 30, 58, 0.25);
+  margin-bottom: var(--banner-margin-bottom);
+  max-width: var(--banner-max-width);
+  overflow: hidden;
+}
+
+.datetime-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--banner-padding-vertical) var(--banner-padding-horizontal);
+  gap: var(--banner-gap);
+  flex-wrap: wrap;
+}
+
+.date-section,
+.time-section {
+  display: flex;
+  align-items: center;
+  gap: var(--icon-text-gap);
+}
+
+.date-section {
+  flex: 1;
+  min-width: 300px;
+}
+
+.date-section i {
+  font-size: var(--icono-size);
+  color: var(--diego-red);
+}
+
+.date-section span {
+  font-size: var(--fecha-texto-size);
+  font-weight: 700;
+  color: var(--diego-red);
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+}
+
+.time-section {
+  flex-shrink: 0;
+}
+
+.time-section i {
+  font-size: var(--icono-size);
+  color: var(--diego-blue);
+}
+
+.time-section span {
+  font-family: 'Courier New', monospace;
+  font-size: var(--hora-texto-size);
+  font-weight: 900;
+  color: var(--diego-blue);
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 8px rgba(30, 64, 175, 0.2);
+}
+
+@media (max-width: 768px) {
+  .datetime-banner-content {
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+  }
+
+  .date-section {
+    min-width: unset;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .time-section {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .date-section span {
+    font-size: 1.1rem;
+  }
+
+  .time-section span {
+    font-size: 2rem;
+  }
+}
+
 /* Footer */
 .tile-foot-carniceria {
   background: linear-gradient(135deg, var(--diego-blue) 0%, var(--diego-blue-dark) 100%);
@@ -524,28 +701,5 @@ onBeforeUnmount(() => {
 /* Accesibilidad / motion */
 @media (prefers-reduced-motion: reduce) {
   .tile, .tile:hover, .animate-number, .carousel { animation: none !important; transition: none !important; }
-}
-</style>
-
-<!-- ❗️Regla GLOBAL para ocultar el navbar cuando haya fullscreen -->
-<style>
-.hide-navbar .app-navbar { display: none !important; }
-.fullscreen-mode .display-diegoexito {
-  min-height: 100vh;
-  padding: var(--fullscreen-padding);
-}
-.fullscreen-mode .container-xl {
-  width: 100%;
-  max-width: none;
-  padding-left: 0;
-  padding-right: 0;
-  display: flex;
-  justify-content: var(--fullscreen-justify);
-  align-items: var(--fullscreen-align);
-  min-height: 100vh;
-}
-.fullscreen-mode .display-grid-enhanced {
-  max-width: var(--fullscreen-max-width);
-  width: 100%;
 }
 </style>
