@@ -15,10 +15,10 @@
     <!-- Indicadores (máximo 3 puntos) -->
     <div v-if="images.length > 1" class="carousel-indicators">
       <button
-        v-for="dot in 3"
-        :key="dot"
-        :class="{ active: isActiveDot(dot - 1) }"
-        :aria-label="`Posición ${dot}`"
+        v-for="index in Math.min(3, images.length)"
+        :key="index"
+        :class="{ active: isActiveDot(index - 1) }"
+        :aria-label="`Indicador ${index}`"
       ></button>
     </div>
   </div>
@@ -89,7 +89,7 @@ function goToSlide(index) {
   }
 }
 
-// Determinar cuál de los 3 puntos debe estar activo
+// Determinar cuál de los 3 puntos debe estar activo (rotación cíclica)
 function isActiveDot(dotIndex) {
   const totalImages = props.images.length
   const currentIndex = currentImageIndex.value
@@ -99,18 +99,12 @@ function isActiveDot(dotIndex) {
     return dotIndex === currentIndex
   }
 
-  // Para más de 3 imágenes, distribuir en 3 secciones
-  const sectionSize = totalImages / 3
-  const currentSection = Math.floor(currentIndex / sectionSize)
-
-  // El último punto representa todo lo que está más allá de la sección 2
-  if (dotIndex === 2 && currentSection >= 2) {
-    return true
-  }
-
-  return dotIndex === currentSection
+  // Para más de 3 imágenes, usar módulo para rotación cíclica
+  // Ejemplo con 6 imágenes:
+  // Imagen 0 -> Punto 0, Imagen 1 -> Punto 1, Imagen 2 -> Punto 2
+  // Imagen 3 -> Punto 0, Imagen 4 -> Punto 1, Imagen 5 -> Punto 2
+  return (currentIndex % 3) === dotIndex
 }
-
 
 function startInterval() {
   if (props.images.length <= 1) return

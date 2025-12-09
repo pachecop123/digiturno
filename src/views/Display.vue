@@ -173,9 +173,21 @@ function onFsChange() {
 
 /* ===== Sistema de Rotación de Publicidades ===== */
 let videoRotationIndex = ref(0)
+const failedVideos = ref(new Set())
+
+// Validar si un video existe y es accesible
+async function validateVideo(videoPath) {
+  try {
+    const response = await fetch(videoPath, { method: 'HEAD' })
+    return response.ok
+  } catch (error) {
+    console.error('Error validando video:', videoPath, error)
+    return false
+  }
+}
 
 // Mostrar el siguiente video
-function showNextVideo() {
+async function showNextVideo() {
   if (videoAds.value.length === 0) {
     console.log('No hay videos disponibles')
     showingImages.value = true
@@ -183,17 +195,55 @@ function showNextVideo() {
     return
   }
 
-  showingImages.value = false
-  currentAd.value = videoAds.value[videoRotationIndex.value]
-  console.log(`Mostrando video ${videoRotationIndex.value + 1} de ${videoAds.value.length}:`, currentAd.value.name)
+  // Buscar un video válido
+  let attempts = 0
+  const maxAttempts = videoAds.value.length
 
-  // Avanzar al siguiente video para la próxima vez
-  videoRotationIndex.value = (videoRotationIndex.value + 1) % videoAds.value.length
+  while (attempts < maxAttempts) {
+    const candidateVideo = videoAds.value[videoRotationIndex.value]
+
+    // Avanzar al siguiente video para la próxima vez
+    videoRotationIndex.value = (videoRotationIndex.value + 1) % videoAds.value.length
+    attempts++
+
+    // Si este video ya falló antes, intentar con el siguiente
+    if (failedVideos.value.has(candidateVideo.path)) {
+      console.log('Omitiendo video previamente fallido:', candidateVideo.name)
+      continue
+    }
+
+    // Validar si el video existe
+    const isValid = await validateVideo(candidateVideo.path)
+    if (!isValid) {
+      console.warn('Video no válido o no encontrado:', candidateVideo.name)
+      failedVideos.value.add(candidateVideo.path)
+      continue
+    }
+
+    // Video válido encontrado
+    showingImages.value = false
+    currentAd.value = candidateVideo
+    console.log(`Mostrando video ${attempts} de ${videoAds.value.length}:`, currentAd.value.name)
+    return
+  }
+
+  // Si llegamos aquí, todos los videos fallaron
+  console.warn('Todos los videos fallaron, mostrando imágenes')
+  showingImages.value = true
+  currentAd.value = null
 }
 
-// Cuando un video termina
-function handleVideoFinished() {
-  console.log('✓ Video terminado')
+// Cuando un video termina o falla
+function handleVideoFinished(error) {
+  if (error) {
+    console.warn('⚠ Video falló o no pudo cargarse, omitiendo...')
+    // Marcar este video como fallido para no intentar reproducirlo de nuevo
+    if (currentAd.value && currentAd.value.path) {
+      failedVideos.value.add(currentAd.value.path)
+    }
+  } else {
+    console.log('✓ Video terminado')
+  }
 
   // Si hay imágenes, mostrarlas
   if (imageAds.value.length > 0) {

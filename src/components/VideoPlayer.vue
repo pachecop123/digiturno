@@ -31,6 +31,9 @@ const props = defineProps({
 const emit = defineEmits(['ended', 'error'])
 
 const videoRef = ref(null)
+const hasError = ref(false)
+let errorTimeout = null
+let errorCount = 0
 
 function handleVideoEnded() {
   console.log('✓ Video terminado:', props.videoSrc)
@@ -38,8 +41,23 @@ function handleVideoEnded() {
 }
 
 function handleVideoError(event) {
-  console.error('✗ Error en el video:', event, props.videoSrc)
-  emit('error', event)
+  // Incrementar contador de errores
+  errorCount++
+
+  // Evitar reportar el mismo error múltiples veces
+  if (hasError.value) return
+
+  // Si es el primer error, esperar un momento para ver si hay más
+  if (errorCount === 1) {
+    if (errorTimeout) clearTimeout(errorTimeout)
+
+    errorTimeout = setTimeout(() => {
+      hasError.value = true
+      console.error('✗ Error cargando video:', props.videoSrc)
+      emit('error', event)
+      errorCount = 0
+    }, 100)
+  }
 }
 
 function handleMetadataLoaded() {
@@ -59,9 +77,17 @@ function handlePause() {
 
 function playVideo() {
   const video = videoRef.value
-  if (!video) return
+  if (!video || hasError.value) return
 
   console.log('Intentando reproducir video:', props.videoSrc)
+
+  // Resetear estados de error
+  hasError.value = false
+  errorCount = 0
+  if (errorTimeout) {
+    clearTimeout(errorTimeout)
+    errorTimeout = null
+  }
 
   // Resetear video
   video.currentTime = 0
@@ -69,19 +95,21 @@ function playVideo() {
 
   // Intentar reproducir
   const attemptPlay = () => {
+    if (hasError.value) return // No intentar si ya hubo error
+
     video.play()
       .then(() => {
         console.log('✓ Play() exitoso')
       })
       .catch(error => {
-        console.error('✗ Error en play():', error)
-        // Reintentar después de un pequeño delay
-        setTimeout(() => {
-          video.play().catch(err => {
-            console.error('✗ Segundo intento fallido:', err)
-            emit('error', err)
-          })
-        }, 200)
+        // Solo reportar errores que no sean por pausa
+        if (error.name !== 'AbortError') {
+          console.error('✗ Error en play():', error.message)
+        }
+        // No reintentar si ya hubo un error de carga del archivo
+        if (hasError.value) {
+          return
+        }
       })
   }
 
@@ -89,9 +117,20 @@ function playVideo() {
   if (video.readyState >= 1) {
     attemptPlay()
   } else {
-    // Esperar a que cargue metadata
+    // Esperar a que cargue metadata con timeout
     console.log('Esperando metadata...')
-    video.addEventListener('loadedmetadata', attemptPlay, { once: true })
+    const timeoutId = setTimeout(() => {
+      if (video.readyState < 1 && !hasError.value) {
+        console.error('✗ Timeout esperando metadata del video')
+        hasError.value = true
+        emit('error', new Error('Timeout loading video'))
+      }
+    }, 5000) // 5 segundos de timeout
+
+    video.addEventListener('loadedmetadata', () => {
+      clearTimeout(timeoutId)
+      attemptPlay()
+    }, { once: true })
   }
 }
 
@@ -113,6 +152,12 @@ onBeforeUnmount(() => {
   if (video) {
     video.pause()
     video.src = ''
+  }
+
+  // Limpiar timeout de errores
+  if (errorTimeout) {
+    clearTimeout(errorTimeout)
+    errorTimeout = null
   }
 })
 </script>
