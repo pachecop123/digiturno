@@ -129,7 +129,7 @@
             <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
               <div class="text-muted small">
                 <i class="bi bi-info-circle me-1"></i>
-                Acepta todos los formatos de imagen y video (máx. 50MB)
+                Acepta todos los formatos de imagen y video (máx. 1GB)
               </div>
               <div class="text-muted small">
                 <i class="bi bi-shield-fill me-1"></i>
@@ -203,9 +203,9 @@ async function uploadAd(event) {
   if (!file) return
 
   // Validar tamaño
-  const maxSize = 50 * 1024 * 1024 // 50MB
+  const maxSize = 1024 * 1024 * 1024 // 1GB
   if (file.size > maxSize) {
-    Swal.fire('Archivo muy grande', 'El archivo no debe superar los 50MB', 'warning')
+    Swal.fire('Archivo muy grande', 'El archivo no debe superar 1GB', 'warning')
     if (fileInput.value) fileInput.value.value = ''
     return
   }
