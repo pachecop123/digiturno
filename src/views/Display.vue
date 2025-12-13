@@ -32,7 +32,7 @@
             <div class="icon-wrapper-carniceria">
               <i class="bi bi-person-lines-fill"></i>
             </div>
-            <span class="section-title">Turno Actual - Carnicería</span>
+            <span class="section-title">Turno Actual - Seccion Carnes</span>
           </header>
 
           <div class="tile-body-modern">
@@ -40,7 +40,7 @@
               <div class="turn-number-carniceria" :class="{ 'animate-number': popAnim }">
                 {{ showing }}
               </div>
-              <div class="turn-label-carniceria">CARNICERÍA</div>
+              <div class="turn-label-carniceria">Seccion Carnes</div>
             </div>
           </div>
 

@@ -7,7 +7,7 @@
           <div class="icon-wrapper-carniceria">
             <i class="bi bi-person-plus-fill"></i>
           </div>
-          <span class="section-title">Tomar Turno - Carnicería</span>
+          <span class="section-title">Tomar Turno - Seccion Carnes</span>
 
           <!-- Preferencias rápidas -->
           <div class="ms-auto d-flex align-items-center gap-3">
@@ -110,7 +110,7 @@
     <div id="ticket-print" aria-hidden="true">
       <div class="tp-wrapper">
         <div class="tp-brand">DIEGO ÉXITO</div>
-        <div class="tp-sub">Carnicería</div>
+        <div class="tp-sub">Seccion Carnes</div>
 
         <div class="tp-sep">--------------------------------</div>
 
@@ -193,7 +193,7 @@ function downloadTicketPdf() {
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(12)
-  doc.text('Carnicería', cx, y, { align: 'center' }); y += 6
+  doc.text('Seccion carnes', cx, y, { align: 'center' }); y += 6
 
   // Separador
   doc.setDrawColor(0); doc.setLineWidth(0.2)
