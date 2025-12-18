@@ -109,11 +109,13 @@
     <!-- ====== TEMPLATE DE IMPRESIÓN 80mm ====== -->
     <div id="ticket-print" aria-hidden="true">
       <div class="tp-wrapper">
-        <div class="tp-logo">
+        <div class="tp-header">
           <img src="/logo.png" alt="Diego Éxito" class="tp-logo-img">
+          <div class="tp-brand-wrapper">
+            <div class="tp-brand">DIEGO ÉXITO</div>
+            <div class="tp-sub">Seccion Carnes</div>
+          </div>
         </div>
-        <div class="tp-brand">DIEGO ÉXITO</div>
-        <div class="tp-sub">Seccion Carnes</div>
 
         <div class="tp-sep">--------------------------------</div>
 
@@ -189,17 +191,19 @@ async function downloadTicketPdf() {
   const cx = 40 // centro horizontal
   let y = 8
 
-  // Logo (si está disponible)
+  // Logo y encabezado lado a lado
+  let logoWidth = 0
+  let logoHeight = 0
+  let logoX = 5 // margen izquierdo
+  
   try {
     const logoImg = new Image()
     logoImg.src = '/logo.png'
     await new Promise((resolve, reject) => {
       logoImg.onload = () => {
-        const logoWidth = 30 // ancho del logo en mm
-        const logoHeight = (logoImg.height / logoImg.width) * logoWidth
-        const logoX = cx - logoWidth / 2
+        logoWidth = 15 // ancho del logo reducido en mm
+        logoHeight = (logoImg.height / logoImg.width) * logoWidth
         doc.addImage(logoImg, 'PNG', logoX, y, logoWidth, logoHeight)
-        y += logoHeight + 3
         resolve()
       }
       logoImg.onerror = reject
@@ -209,14 +213,18 @@ async function downloadTicketPdf() {
     console.log('Logo no disponible para PDF')
   }
 
-  // Encabezado
+  // Texto al lado del logo
+  const textX = logoX + logoWidth + 2 // 2mm de espacio entre logo y texto
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
-  doc.text('DIEGO ÉXITO', cx, y, { align: 'center' }); y += 6
+  doc.setFontSize(14)
+  doc.text('DIEGO ÉXITO', textX, y + 4); 
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(12)
-  doc.text('Seccion carnes', cx, y, { align: 'center' }); y += 6
+  doc.setFontSize(10)
+  doc.text('Seccion carnes', textX, y + 8); 
+  
+  // Ajustar y según el logo o texto (el que sea más alto)
+  y += Math.max(logoHeight, 10) + 3
 
   // Separador
   doc.setDrawColor(0); doc.setLineWidth(0.2)
@@ -497,32 +505,37 @@ async function printTicket() {
   font-size: 12px;
   color: #000;
 }
-#ticket-print .tp-logo {
-  text-align: center;
+#ticket-print .tp-header {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
   margin-bottom: 4mm;
 }
 #ticket-print .tp-logo-img {
-  max-width: 50mm;
-  max-height: 20mm;
+  max-width: 20mm;
+  max-height: 15mm;
   width: auto;
   height: auto;
   object-fit: contain;
-  display: block;
-  margin: 0 auto;
+  flex-shrink: 0;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+#ticket-print .tp-brand-wrapper {
+  flex: 1;
+}
 #ticket-print .tp-brand {
-  text-align: center;
   font-weight: 900;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: 1px;
-  margin-top: 2mm;
+  line-height: 1.2;
+  margin: 0;
 }
 #ticket-print .tp-sub {
-  text-align: center;
   font-weight: 700;
-  margin-bottom: 6px;
+  font-size: 11px;
+  margin-top: 1mm;
+  line-height: 1.2;
 }
 #ticket-print .tp-sep {
   text-align: center;
