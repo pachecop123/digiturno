@@ -31,7 +31,8 @@ REM Opción 1: Brave Browser (Prioridad)
 if exist "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe" (
     echo [OK] Brave Browser detectado
     echo [*] Abriendo vista kiosco en modo pantalla completa...
-    start "" "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %KIOSCO_URL%
+    echo [*] Impresión silenciosa habilitada
+    start "" "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --kiosk-printing --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %KIOSCO_URL%
     echo.
     echo ================================================
     echo   Kiosco abierto en modo pantalla completa
@@ -46,7 +47,8 @@ REM Opción 2: Brave Browser (Program Files)
 if exist "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" (
     echo [OK] Brave Browser detectado
     echo [*] Abriendo vista kiosco en modo pantalla completa...
-    start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %KIOSCO_URL%
+    echo [*] Impresión silenciosa habilitada
+    start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --kiosk-printing --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %KIOSCO_URL%
     echo.
     echo ================================================
     echo   Kiosco abierto en modo pantalla completa
