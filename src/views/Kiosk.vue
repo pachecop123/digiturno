@@ -330,6 +330,12 @@ async function printTicket() {
 
   background: #fafafa;
   min-height: 100dvh;
+  height: 100vh;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
   color: #212529;
 }
 
@@ -485,7 +491,7 @@ async function printTicket() {
 #ticket-print .tp-code {
   text-align: center;
   font-weight: 900;
-  font-size: 28px;
+  font-size: 50px;
   margin: 6px 0 4px;
 }
 #ticket-print .tp-row {

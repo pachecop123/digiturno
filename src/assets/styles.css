@@ -57,6 +57,11 @@ a { text-decoration: none; }
 .theme-dark .app-navbar .nav-link:hover { background: rgba(255,255,255,.06); }
 .app-navbar .nav-link.active { background: rgba(13,110,253,.12); color: var(--brand); }
 
+/* Ocultar navbar en la vista de kiosco */
+body:has(.kiosk-diegoexito) .app-navbar {
+  display: none !important;
+}
+
 /* =========================
    Componentes de vistas
    ========================= */
