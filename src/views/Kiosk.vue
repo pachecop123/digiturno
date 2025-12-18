@@ -109,6 +109,9 @@
     <!-- ====== TEMPLATE DE IMPRESIÓN 80mm ====== -->
     <div id="ticket-print" aria-hidden="true">
       <div class="tp-wrapper">
+        <div class="tp-logo">
+          <img src="/logo.png" alt="Diego Éxito" class="tp-logo-img">
+        </div>
         <div class="tp-brand">DIEGO ÉXITO</div>
         <div class="tp-sub">Seccion Carnes</div>
 
@@ -178,13 +181,33 @@ function beep() {
 /* ===============================
    DESCARGA AUTOMÁTICA: PDF 80mm
    =============================== */
-function downloadTicketPdf() {
+async function downloadTicketPdf() {
   if (!ticket.value) return
 
   // Tamaño: 80mm x 120mm (ajusta la altura si quieres)
   const doc = new jsPDF({ unit: 'mm', format: [80, 120] })
   const cx = 40 // centro horizontal
   let y = 8
+
+  // Logo (si está disponible)
+  try {
+    const logoImg = new Image()
+    logoImg.src = '/logo.png'
+    await new Promise((resolve, reject) => {
+      logoImg.onload = () => {
+        const logoWidth = 30 // ancho del logo en mm
+        const logoHeight = (logoImg.height / logoImg.width) * logoWidth
+        const logoX = cx - logoWidth / 2
+        doc.addImage(logoImg, 'PNG', logoX, y, logoWidth, logoHeight)
+        y += logoHeight + 3
+        resolve()
+      }
+      logoImg.onerror = reject
+      setTimeout(() => resolve(), 100) // timeout si no carga
+    })
+  } catch (e) {
+    console.log('Logo no disponible para PDF')
+  }
 
   // Encabezado
   doc.setFont('helvetica', 'bold')
@@ -455,6 +478,14 @@ async function printTicket() {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+
+  /* Asegurar que el logo se imprima correctamente */
+  #ticket-print .tp-logo-img {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
 }
 
 /* Estilos del ticket (se ven en impresión) */
@@ -466,11 +497,27 @@ async function printTicket() {
   font-size: 12px;
   color: #000;
 }
+#ticket-print .tp-logo {
+  text-align: center;
+  margin-bottom: 4mm;
+}
+#ticket-print .tp-logo-img {
+  max-width: 50mm;
+  max-height: 20mm;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
 #ticket-print .tp-brand {
   text-align: center;
   font-weight: 900;
   font-size: 18px;
   letter-spacing: 1px;
+  margin-top: 2mm;
 }
 #ticket-print .tp-sub {
   text-align: center;
