@@ -165,8 +165,58 @@ const showing = computed(() =>
   current.value || lastAttended.value || queue.value[0] || `${prefix.value}-000`
 )
 
-/* Sonido de notificación cuando cambia el turno */
-function playTurnNotification() {
+/* Anunciar el turno por voz cuando cambia */
+function announceTurn(turnNumber) {
+  try {
+    // Verificar si el navegador soporta Web Speech API
+    if ('speechSynthesis' in window) {
+      // Cancelar cualquier anuncio anterior
+      window.speechSynthesis.cancel()
+      
+      // Crear el mensaje a pronunciar
+      // Formatear el número del turno para que se pronuncie mejor
+      const turnFormatted = String(turnNumber).replace(/-/g, ' ')
+      const message = `Turno ${turnFormatted}. Por favor acérquese a la sección de carnes`
+      
+      // Crear el objeto de síntesis de voz
+      const utterance = new SpeechSynthesisUtterance(message)
+      
+      // Configurar la voz (intentar usar español)
+      const voices = window.speechSynthesis.getVoices()
+      const spanishVoice = voices.find(voice => 
+        voice.lang.startsWith('es') || voice.lang.includes('Spanish')
+      )
+      
+      if (spanishVoice) {
+        utterance.voice = spanishVoice
+      } else {
+        // Si no hay voz en español, usar la voz predeterminada
+        utterance.lang = 'es-ES'
+      }
+      
+      // Configurar propiedades de la voz
+      utterance.rate = 0.9  // Velocidad (0.1 a 10)
+      utterance.pitch = 1.0  // Tono (0 a 2)
+      utterance.volume = 1.0  // Volumen (0 a 1)
+      
+      // Reproducir el anuncio
+      window.speechSynthesis.speak(utterance)
+      
+      console.log('Anunciando turno:', turnNumber)
+    } else {
+      console.warn('El navegador no soporta síntesis de voz')
+      // Fallback: reproducir sonido si no hay soporte de voz
+      playFallbackSound()
+    }
+  } catch (error) {
+    console.warn('Error al anunciar el turno:', error)
+    // Fallback: reproducir sonido si hay error
+    playFallbackSound()
+  }
+}
+
+/* Sonido de respaldo si no hay soporte de voz */
+function playFallbackSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
     const o1 = ctx.createOscillator()
@@ -213,8 +263,8 @@ watch(showing, (n, o) => {
   if (n !== o) {
     popAnim.value = true
     setTimeout(() => (popAnim.value = false), 600)
-    // Reproducir sonido de notificación cuando cambia el turno
-    playTurnNotification()
+    // Anunciar el turno por voz cuando cambia
+    announceTurn(n)
   }
 })
 
@@ -388,6 +438,29 @@ onMounted(() => {
   document.addEventListener('webkitfullscreenchange', onFsChange)
   document.addEventListener('mozfullscreenchange', onFsChange)
   document.addEventListener('MSFullscreenChange', onFsChange)
+
+  // Cargar voces para síntesis de voz (necesario en algunos navegadores)
+  if ('speechSynthesis' in window) {
+    // Algunos navegadores necesitan que se carguen las voces primero
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      if (voices.length > 0) {
+        console.log('Voces disponibles:', voices.length)
+        const spanishVoices = voices.filter(v => v.lang.startsWith('es'))
+        if (spanishVoices.length > 0) {
+          console.log('Voces en español encontradas:', spanishVoices.length)
+        }
+      }
+    }
+    
+    // Cargar voces inmediatamente
+    loadVoices()
+    
+    // Algunos navegadores cargan las voces de forma asíncrona
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices
+    }
+  }
 
   // Iniciar reloj
   updateClock()

@@ -28,11 +28,12 @@ echo   INICIANDO SERVICIOS...
 echo ================================================
 echo.
 
-REM Abrir el navegador después de 15 segundos en segundo plano (pantalla Display)
-start /MIN cmd /c "timeout /t 15 /nobreak > nul && start http://localhost:3000/display"
+REM Abrir el navegador después de 15 segundos en modo pantalla completa (pantalla Display)
+set "DISPLAY_URL=http://localhost:3000/display"
+start /MIN cmd /c "timeout /t 15 /nobreak > nul && if exist \"%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\Application\\brave.exe\" (start \"\" \"%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\Application\\brave.exe\" --kiosk --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %DISPLAY_URL%) else if exist \"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe\" (start \"\" \"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe\" --kiosk --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %DISPLAY_URL%) else if exist \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" (start \"\" \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" --kiosk --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %DISPLAY_URL%) else if exist \"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" (start \"\" \"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --kiosk --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %DISPLAY_URL%) else if exist \"C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe\" (start \"\" \"C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe\" --kiosk --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --no-default-browser-check %DISPLAY_URL%) else (start %DISPLAY_URL%)"
 
 echo [*] Navegador se abrira automaticamente en 15 segundos...
-echo [*] Pantalla Display: http://localhost:3000/display
+echo [*] Pantalla Display: %DISPLAY_URL% (modo pantalla completa)
 echo [*] Frontend: http://localhost:3000
 echo [*] Backend:  http://localhost:3002
 echo.

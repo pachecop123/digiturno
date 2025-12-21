@@ -53,45 +53,35 @@
 
           <!-- Acción principal -->
           <div class="action-tile">
-            <p class="mb-3 text-muted">Presiona el botón para generar tu turno.</p>
+            <p class="mb-4 text-muted fs-5">Presiona el botón para generar tu turno.</p>
             <button
-              class="btn cta-btn btn-lg d-inline-flex align-items-center gap-2"
+              class="btn cta-btn-kiosk d-inline-flex align-items-center justify-content-center gap-3"
               :disabled="loading"
               @click="takeTicket"
             >
               <template v-if="!loading">
-                <i class="bi bi-person-plus"></i> Tomar turno
+                <i class="bi bi-person-plus-fill"></i>
+                <span class="cta-text">TOMAR TURNO</span>
               </template>
               <template v-else>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Generando…
+                <span class="spinner-border spinner-border-lg" role="status" aria-hidden="true"></span>
+                <span class="cta-text">Generando…</span>
               </template>
             </button>
-            <small class="text-muted d-block mt-2">
+            <small class="text-muted d-block mt-3">
               Evita tocar varias veces: se protege contra clicks repetidos.
             </small>
           </div>
 
           <!-- Ticket emitido -->
           <div v-if="ticket" class="ticket-tile mt-4">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
               <h3 class="mb-0">
                 Tu turno:
                 <span class="badge bg-success fs-3 align-middle">{{ ticket }}</span>
               </h3>
-              <div class="d-flex flex-wrap gap-2">
-                <!-- <button class="btn btn-outline-secondary" @click="copyTicket">
-                  <i class="bi bi-clipboard-check me-1"></i> Copiar
-                </button>
-                <button class="btn btn-outline-success" @click="shareWhatsApp">
-                  <i class="bi bi-whatsapp me-1"></i> WhatsApp
-                </button> -->
-                <button class="btn btn-outline-dark" @click="printTicket">
-                  <i class="bi bi-printer me-1"></i> Imprimir
-                </button>
-              </div>
             </div>
-            <div class="mt-3 text-muted">
+            <div class="mt-3 text-muted text-center">
               <i class="bi bi-info-circle me-1"></i>
               Muestra este número cuando te llamen en la pantalla.
             </div>
@@ -428,21 +418,73 @@ async function printTicket() {
 /* Acción principal */
 .action-tile{
   border: 1px dashed rgba(0,0,0,.12);
-  border-radius: 14px; padding: 1.25rem; background: #fff;
+  border-radius: 14px; padding: 2rem; background: #fff;
+  text-align: center;
 }
 
-/* Botón gradiente */
-.cta-btn{
+/* Botón gradiente - Super llamativo para kiosco */
+.cta-btn-kiosk{
   --g1: var(--diego-red);
   --g2: var(--diego-blue);
   background: linear-gradient(135deg, var(--g1), var(--g2));
-  border: 0; color: #fff; font-weight: 800;
-  border-radius: .8rem; padding-inline: 1.25rem;
-  box-shadow: 0 10px 22px rgba(30,64,175,.22);
-  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+  border: 0; 
+  color: #fff; 
+  font-weight: 900;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  border-radius: 1.2rem; 
+  padding: 1.8rem 3rem;
+  min-width: 320px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 15px 35px rgba(196, 30, 58, 0.4), 0 5px 15px rgba(30, 64, 175, 0.3);
+  transition: all .2s ease;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
-.cta-btn:hover{ filter: brightness(.98) saturate(1.05); transform: translateY(-1px); }
-.cta-btn:active{ transform: translateY(0); box-shadow: 0 6px 14px rgba(30,64,175,.2); }
+
+.cta-btn-kiosk::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+  transition: left .5s ease;
+}
+
+.cta-btn-kiosk:hover::before {
+  left: 100%;
+}
+
+.cta-btn-kiosk:hover{ 
+  filter: brightness(1.1) saturate(1.1); 
+  transform: translateY(-3px) scale(1.02); 
+  box-shadow: 0 20px 45px rgba(196, 30, 58, 0.5), 0 8px 20px rgba(30, 64, 175, 0.4);
+}
+
+.cta-btn-kiosk:active{ 
+  transform: translateY(-1px) scale(0.98); 
+  box-shadow: 0 10px 25px rgba(196, 30, 58, 0.4), 0 4px 12px rgba(30, 64, 175, 0.3);
+}
+
+.cta-btn-kiosk:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cta-btn-kiosk i {
+  font-size: 1.5em;
+}
+
+.cta-text {
+  font-size: 1em;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
 
 /* Ticket emitido (vista) */
 .ticket-tile{
