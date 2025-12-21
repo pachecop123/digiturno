@@ -165,12 +165,56 @@ const showing = computed(() =>
   current.value || lastAttended.value || queue.value[0] || `${prefix.value}-000`
 )
 
+/* Sonido de notificación cuando cambia el turno */
+function playTurnNotification() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const o1 = ctx.createOscillator()
+    const o2 = ctx.createOscillator()
+    const g = ctx.createGain()
+    
+    // Crear un sonido de notificación (dos tonos ascendentes)
+    o1.type = 'sine'
+    o1.frequency.value = 523.25 // Do5
+    o2.type = 'sine'
+    o2.frequency.value = 659.25 // Mi5
+    
+    o1.connect(g)
+    o2.connect(g)
+    g.connect(ctx.destination)
+    
+    // Configurar volumen
+    g.gain.setValueAtTime(0, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05)
+    
+    // Primer tono
+    o1.start(ctx.currentTime)
+    o1.stop(ctx.currentTime + 0.15)
+    
+    // Segundo tono (más agudo)
+    o2.start(ctx.currentTime + 0.15)
+    o2.stop(ctx.currentTime + 0.3)
+    
+    // Fade out
+    g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3)
+    
+    // Limpiar contexto después de reproducir
+    setTimeout(() => {
+      ctx.close()
+    }, 400)
+  } catch (error) {
+    console.warn('No se pudo reproducir el sonido de notificación:', error)
+  }
+}
+
 /* Animación de número */
 const popAnim = ref(false)
 watch(showing, (n, o) => {
   if (n !== o) {
     popAnim.value = true
     setTimeout(() => (popAnim.value = false), 600)
+    // Reproducir sonido de notificación cuando cambia el turno
+    playTurnNotification()
   }
 })
 
